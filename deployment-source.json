@@ -1,0 +1,34 @@
+{
+  "purpose": "Unsite production workspace for Next.js/Vercel",
+  "includes": [
+    "app/page.tsx",
+    "app/layout.tsx",
+    "app/workspace-app.tsx",
+    "app/workspace.css",
+    "app/globals.css",
+    "app/account",
+    "app/auth",
+    "app/api/app",
+    "app/api/auth",
+    "components/unsite",
+    "components/ui",
+    "hooks",
+    "lib/production",
+    "lib/utils.ts",
+    "public",
+    "vendor",
+    "postcss.config.mjs",
+    "tsconfig.json",
+    "package.json",
+    "package-lock.json"
+  ],
+  "runtime_adapter_sha256": "6cbb0b31c733cd0c090a535d3ec3596a671e37eb984b8b433f7ab56ecb366590",
+  "database_schema": "Apply and verify collection coordination before deploying",
+  "environment_keys": [
+    "UNSITE_SUPABASE_URL",
+    "UNSITE_SUPABASE_PUBLISHABLE_KEY",
+    "UNSITE_APP_ORIGIN",
+    "UNSITE_WORKER_TOKEN",
+    "UNSITE_WORKER_GATEWAY_KEY"
+  ]
+}
