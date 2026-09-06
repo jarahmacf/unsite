@@ -2,6 +2,7 @@
   "purpose": "Unsite production workspace for Next.js/Vercel",
   "includes": [
     "app/page.tsx",
+    "app/demo",
     "app/layout.tsx",
     "app/workspace-app.tsx",
     "app/workspace.css",

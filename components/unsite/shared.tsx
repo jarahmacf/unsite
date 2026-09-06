@@ -1,5 +1,5 @@
 "use client";
-import {Children,cloneElement,isValidElement,useId,useRef,type ReactNode} from "react";
+import {Children,cloneElement,createContext,isValidElement,useContext,useId,useRef,type ReactNode} from "react";
 import {Loader2,ArrowUpRight} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from "@/components/ui/select";
@@ -10,6 +10,9 @@ export async function api<T=Record<string,unknown>>(path:string,body?:unknown):P
   if(!r.ok)throw new Error(data.error||"The request could not be completed.");return data;
 }
 export type Command=(action:string,payload:Record<string,unknown>)=>Promise<Record<string,unknown>>;
+const ApiContext=createContext<typeof api>(api);
+export function ApiProvider({request,children}:{request:typeof api;children:ReactNode}){return <ApiContext.Provider value={request}>{children}</ApiContext.Provider>;}
+export function useApi(){return useContext(ApiContext);}
 export function Choice({value,onChange,items,label,disabled}:{value:string;onChange:(s:string)=>void;items:{value:string;label:string}[];label:string;disabled?:boolean}){
   return <Select value={value} onValueChange={onChange} disabled={disabled}><SelectTrigger className="us-select" aria-label={label}><SelectValue/></SelectTrigger><SelectContent>{items.map(i=><SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}</SelectContent></Select>;
 }

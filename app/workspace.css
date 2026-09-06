@@ -237,6 +237,9 @@
 .us-source-skeleton [data-slot=skeleton] { background: #f0f0f0; }
 .us-sample-notice { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 18px; margin-bottom: 28px; border: 1px solid #d1e9ff; border-radius: 8px; background: #f5faff; font-size: 13px; color: #175cd3; }
 .us-sample-notice button { text-decoration: underline; font-weight: 500; }
+.us-demo-states { margin: -8px 0 24px; color: #737373; font-size: 13px; }
+.us-demo-states summary { cursor: pointer; margin-bottom: 12px; }
+.us-demo-states [aria-pressed=true] { background: #f5f5f5; border-color: #737373; }
 
 /* Authentication is part of the same system. */
 .us-auth { min-height: 100dvh; display: grid; grid-template-columns: 1.05fr 1fr; background: #fff; }

@@ -36,13 +36,13 @@ type ShellProps = {
   onRefresh: () => Promise<void>;
 };
 
-export function Brand() {
-  return <a href="/" className="us-brand" aria-label="Unsite home"><span className="us-symbol" aria-hidden="true">u</span>unsite<span className="us-word-dot">.</span></a>;
+export function Brand({href="/"}:{href?:string}) {
+  return <a href={href} className="us-brand" aria-label="Unsite home"><span className="us-symbol" aria-hidden="true">u</span>unsite<span className="us-word-dot">.</span></a>;
 }
 
 function Navigation({ spaces, spaceId, tab, email, candidateCount = 0, onTabChange, onSpaceChange, onCreate, onSignOut, sample, enabledTabs }: Omit<ShellProps, "children" | "onRefresh">) {
   return <>
-    <Brand />
+    <Brand href={sample ? "/demo" : "/"} />
     <div className="us-space-switcher">
       <span className="us-sidebar-label">Workspace</span>
       {spaces.length ? <Choice label="Switch workspace" value={spaceId || spaces[0].id} onChange={onSpaceChange} items={spaces.map(s => ({ value: s.id, label: s.name }))} /> : <span className="us-sidebar-muted">Your first workspace starts here</span>}

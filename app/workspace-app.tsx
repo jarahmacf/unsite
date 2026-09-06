@@ -1,29 +1,17 @@
 "use client";
-import {useCallback,useEffect,useRef,useState,type FormEvent} from "react";
-import {ArrowRight,LogOut} from "lucide-react";
-import {Input} from "@/components/ui/input";
-import {Textarea} from "@/components/ui/textarea";
+import {useCallback,useEffect,useRef,useState} from "react";
 import {Auth} from "@/components/unsite/auth";
 import {AddSource,Sources,SourcesSkeleton} from "@/components/unsite/sources";
 import {WorkspaceShell,type WorkspaceTab} from "@/components/unsite/workspace-shell";
 import {Overview} from "@/components/unsite/overview";
+import {CreateSpace,Settings} from "@/components/unsite/workspace-forms";
 import {Knowledge,Review} from "@/components/unsite/knowledge";
 import {AgentLab} from "@/components/unsite/agent-lab";
 import {Presence} from "@/components/unsite/presence";
-import {Action,api,Busy,ErrorNotice,Field,Modal,Pill,type Command} from "@/components/unsite/shared";
+import {Action,api,Busy,ErrorNotice,Modal,type Command} from "@/components/unsite/shared";
 import type {RuntimeStatus,Space,SpaceState} from "@/lib/production/types";
 type Tab=WorkspaceTab;
 type User={id:string;email:string};
-function CreateSpace({onCreated,onCancel}:{onCreated:(s:Space)=>void;onCancel?:()=>void}){
-  const [name,setName]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState(""),request=useRef(crypto.randomUUID());
-  async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError("");try{const r=await api<{result:Space}>("/api/app/create_space",{name,request_id:request.current});onCreated(r.result);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
-  return <form className="us-create" onSubmit={submit}><span className="us-eyebrow">Start with your material</span><h1>What are you bringing to Unsite?</h1><p>Give this collection a name. Add documents, pages, or notes next; you can organize different kinds of material together.</p><Field label="Workspace name">{id=><Input id={id} autoFocus required maxLength={200} value={name} placeholder="Collected work, company knowledge, project archive…" onChange={e=>setName(e.target.value)}/>}</Field><ErrorNotice message={error}/><div className="us-modal-actions">{onCancel?<Action secondary disabled={busy} onClick={onCancel}>Cancel</Action>:<span/>}<Action type="submit" disabled={busy}>{busy?<Busy label="Creating…"/>:<>Create workspace<ArrowRight size={16}/></>}</Action></div></form>;
-}
-function Settings({state,user,status,command,signOut,canEdit}:{state:SpaceState;user:User;status:RuntimeStatus|null;command:Command;signOut:()=>void;canEdit:boolean}){
-  const [name,setName]=useState(state.space.name),[description,setDescription]=useState(state.space.description),[email,setEmail]=useState(state.space.contact_email),[revision,setRevision]=useState(state.space.content_revision),[busy,setBusy]=useState(false),[error,setError]=useState(""),[saved,setSaved]=useState(false);
-  async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError("");setSaved(false);try{const r=await command("update_space",{name,description,contact_email:email,revision});setRevision(Number(r.content_revision));setSaved(true);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
-  return <><div className="us-section-heading"><div><span className="us-eyebrow">The details that matter</span><h1>Settings</h1><p>Manage this presence and your account.</p></div></div><div className="us-settings-grid"><section className="us-card"><h3>Presence details</h3><p className="us-muted">These details become public when you publish a release.</p><form onSubmit={submit}><fieldset disabled={!canEdit||busy}><Field label="Name">{id=><Input id={id} required maxLength={200} value={name} onChange={e=>setName(e.target.value)}/>}</Field><Field label="Description">{id=><Textarea id={id} rows={5} maxLength={5000} value={description} onChange={e=>setDescription(e.target.value)} placeholder="What does this collection cover, and how should an agent use it?"/>}</Field><Field label="Public contact email (optional)" hint="This is separate from your private account email.">{id=><Input id={id} type="email" value={email} onChange={e=>setEmail(e.target.value)}/>}</Field></fieldset><ErrorNotice message={error}/>{saved&&<p className="us-success" role="status">Details saved to your draft.</p>}<div className="us-modal-actions"><button type="button" className="us-link" onClick={()=>{setName(state.space.name);setDescription(state.space.description);setEmail(state.space.contact_email);setRevision(state.space.content_revision);setError("");}}>Reload saved details</button>{canEdit&&<Action type="submit" disabled={busy}>{busy?<Busy/>:"Save details"}</Action>}</div></form></section><div><section className="us-card"><h3>Your account</h3><p>{user.email}</p><p className="us-small us-muted">Account email is private unless you separately add it as a public contact.</p><button className="us-link" onClick={signOut}><LogOut size={15}/>Sign out</button></section><section className="us-card us-service-state"><h3>Service availability</h3>{[{label:"Private storage",ready:status?.storage},{label:"Background processing",ready:status?.processing},{label:"Automatic preparation",ready:status?.model},{label:"Custom domains",ready:status?.domains}].map(s=><div className="us-between" key={s.label}><span>{s.label}</span><Pill tone={s.ready?"green":"amber"}>{s.ready?"Connected":"Setup pending"}</Pill></div>)}</section></div></div></>;
-}
 export default function WorkspaceApp(){
   const [user,setUser]=useState<User|null|undefined>(),[spaces,setSpaces]=useState<Space[]>([]),[spaceId,setSpaceId]=useState(""),[state,setState]=useState<SpaceState|null>(null),[status,setStatus]=useState<RuntimeStatus|null>(null),[tab,setTab]=useState<Tab>("overview"),[error,setError]=useState(""),[loading,setLoading]=useState(false),[create,setCreate]=useState(false),[adding,setAdding]=useState(false),[authError,setAuthError]=useState("");
   const currentId=useRef(""),sequence=useRef(0);
