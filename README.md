@@ -13,17 +13,21 @@ Import this repository into the `jarah-1573` Vercel workspace (`team_eFyqEacf4bV
 - Build command: `npm run build`
 - Output directory: framework default
 
-Set these server environment variables in Vercel's secure project settings before treating the deployment as ready:
+Connect the existing Macfarlane Unsite Supabase project (`taikoetkfginjymihxpf`) to this Vercel project. The portal automatically reads the integration's `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`, including their `NEXT_PUBLIC_` variants. Legacy `SUPABASE_ANON_KEY` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are also supported. The explicit `UNSITE_SUPABASE_URL` and `UNSITE_SUPABASE_PUBLISHABLE_KEY` settings take precedence if present. Privileged secret/service-role keys are never used as fallbacks.
+
+The integration supplies the Supabase connection values, but the application origin and scoped worker credentials still need configuration. Set these server environment variables in Vercel's secure project settings before treating the deployment as ready:
 
 | Variable | Value source |
 | --- | --- |
-| `UNSITE_SUPABASE_URL` | `https://taikoetkfginjymihxpf.supabase.co` |
-| `UNSITE_SUPABASE_PUBLISHABLE_KEY` | The existing Unsite project's modern publishable API key |
+| `UNSITE_SUPABASE_URL` | Optional override; otherwise use the integration's URL, which must be `https://taikoetkfginjymihxpf.supabase.co` |
+| `UNSITE_SUPABASE_PUBLISHABLE_KEY` | Optional override; otherwise use the integration's public key for the same Unsite project |
 | `UNSITE_APP_ORIGIN` | The actual HTTPS application origin assigned in Vercel |
 | `UNSITE_WORKER_TOKEN` | Existing Unsite Vault secret `unsite_worker_key` |
 | `UNSITE_WORKER_GATEWAY_KEY` | Existing Unsite Vault secret `unsite_worker_gateway` |
 
 Keep credentials in secure settings, outside repository files. The worker credentials must remain server-only; do not prefix their variable names with `NEXT_PUBLIC_`.
+
+Scope production settings to Production and redeploy after changing them. The integration does not synchronize the custom Unsite Vault secrets or configure Supabase Auth redirects.
 
 Configure `OPENAI_API_KEY` in Supabase Edge Function secrets, not Vercel or GitHub. The deployed worker last reported that this key was missing. Configuring the provider does not authorize processing source material.
 
