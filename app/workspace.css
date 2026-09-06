@@ -1,5 +1,5 @@
 /* Unsite workspace. Neutral surfaces; colour is reserved for state and focus.
-   Geist is for reading, Outfit at 650 for headings, Geist Mono for technical values. */
+   Geist is for reading, Outfit at 600 for headings, Geist Mono for technical values. */
 .unsite-console, .us-dialog {
   --us-ink: #171717; --us-muted: #737373; --us-line: #e5e5e5;
   --us-green: #067647; --us-lime: #ecfdf3;
@@ -7,7 +7,7 @@
   -webkit-font-smoothing: antialiased;
 }
 .unsite-console { min-height: 100dvh; background: #fff; }
-.unsite-console :is(h1,h2,h3,h4), .us-dialog :is(h1,h2,h3,h4) { font-family: var(--font-heading); text-wrap: balance; font-weight: 650; color: #171717; }
+.unsite-console :is(h1,h2,h3,h4), .us-dialog :is(h1,h2,h3,h4) { font-family: var(--font-heading); text-wrap: balance; font-weight: 600; color: #171717; }
 .unsite-console h1, .us-dialog h1 { font-size: 34px; line-height: 1.2; letter-spacing: -1.1px; margin: 0 0 10px; }
 .unsite-console h2, .us-dialog h2 { font-size: 26px; line-height: 1.3; letter-spacing: -.65px; margin: 0 0 14px; }
 .unsite-console h3, .us-dialog h3 { font-size: 20px; line-height: 1.4; letter-spacing: -.4px; margin: 0 0 12px; }
@@ -39,7 +39,7 @@
 .us-loading { display: grid; justify-items: center; gap: 24px; color: #737373; }
 .us-state-loading { min-height: 50vh; }
 .us-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; box-shadow: 0 1px 3px #17171704; }
-.us-brand { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-heading); font-size: 28px; font-weight: 650; letter-spacing: -1.3px; line-height: 1; text-decoration: none; color: #171717; }
+.us-brand { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-heading); font-size: 28px; font-weight: 600; letter-spacing: -1.3px; line-height: 1; text-decoration: none; color: #171717; }
 .us-word-dot { margin-left: -8px; color: #737373; }
 .us-symbol { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: #262626; color: #fff; font-family: var(--font-heading); font-size: 29px; font-weight: 600; font-style: normal; line-height: 1; padding-bottom: 5px; letter-spacing: -1px; flex-shrink: 0; }
 .us-pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid transparent; border-radius: 6px; font-size: 12px; line-height: 1.6; font-weight: 500; white-space: nowrap; }
@@ -65,7 +65,7 @@
 .us-dialog { max-width: 580px !important; width: calc(100% - 32px); padding: 28px; background: #fff; border-color: #e5e5e5; border-radius: 14px; max-height: calc(100dvh - 48px); overflow-y: auto; gap: 20px; }
 .us-dialog-wide { max-width: 1000px !important; }
 .us-dialog [data-slot=dialog-header] { text-align: left; padding-right: 22px; gap: 9px; }
-.us-dialog [data-slot=dialog-title], .us-dialog [data-slot=sheet-title] { font-family: var(--font-heading); font-size: 24px; font-weight: 650; letter-spacing: -.6px; line-height: 1.3; margin: 0; }
+.us-dialog [data-slot=dialog-title], .us-dialog [data-slot=sheet-title] { font-family: var(--font-heading); font-size: 24px; font-weight: 600; letter-spacing: -.6px; line-height: 1.3; margin: 0; }
 .us-dialog [data-slot=dialog-description], .us-dialog [data-slot=sheet-description] { font-size: 14px; line-height: 1.6; color: #737373; margin: 0; }
 .us-dialog [data-slot=dialog-close] { right: 16px; top: 16px; padding: 6px; }
 .us-modal-actions { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 26px; padding-top: 20px; border-top: 1px solid #e5e5e5; }
@@ -245,7 +245,7 @@
 .us-auth { min-height: 100dvh; display: grid; grid-template-columns: 1.05fr 1fr; background: #fff; }
 .us-auth-story { display: flex; flex-direction: column; justify-content: space-between; padding: 48px clamp(32px,6vw,90px); background: #fafafa; border-right: 1px solid #e5e5e5; min-height: 100dvh; }
 .us-auth-copy { padding: 64px 0 48px; }
-.us-auth-copy h1 { font-size: clamp(44px,4.5vw,64px); line-height: 1.08; font-weight: 650; letter-spacing: -2.3px; margin: 16px 0 24px; }
+.us-auth-copy h1 { font-size: clamp(44px,4.5vw,64px); line-height: 1.08; font-weight: 600; letter-spacing: -2.3px; margin: 16px 0 24px; }
 .us-auth-copy > p { max-width: 410px; color: #737373; font-size: 16px; }
 .us-auth-story > small { color: #737373; font-size: 12px; }
 .us-auth-art { max-width: 360px; margin-top: 36px; border: 1px solid #e5e5e5; border-radius: 10px; background: #fff; overflow: hidden; }
