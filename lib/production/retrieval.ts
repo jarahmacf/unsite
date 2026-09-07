@@ -1,13 +1,24 @@
 import {contextOf,entryType,matchesType} from "./knowledge.ts";
 import type {PublishedRecord,Snapshot} from "./release.ts";
 const stop=new Set("a an the is are was were be been being to of for in on at by and or with from it this that these those what which who whom how when where why do does did can could would should tell me about please".split(" "));
-export function terms(text:string){return [...new Set((text.normalize("NFKC").toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu)||[]).filter(t=>t.length>1&&!stop.has(t)))].slice(0,40);}
+export function terms(text:string,maxTerms=40){return [...new Set((text.normalize("NFKC").toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu)||[]).filter(t=>t.length>1&&!stop.has(t)))].slice(0,maxTerms);}
 const normalize=(text:string)=>text.normalize("NFKC").toLocaleLowerCase();
-const words=(text:string)=>new Set(normalize(text).match(/[\p{L}\p{N}]+/gu)||[]);
+const synonymGroups=[["refund","reimbursement"],["price","pricing","cost"],["timetable","schedule"]];
+export function foldWord(word:string){
+  let value=normalize(word);
+  if(/^[a-z]+$/.test(value)&&value.length>4){
+    if(value.endsWith("ies"))value=value.slice(0,-3)+"y";
+    else if(/(ches|shes|xes|sses)$/.test(value))value=value.slice(0,-2);
+    else if(value.endsWith("s")&&!/(ss|us|is)$/.test(value))value=value.slice(0,-1);
+  }
+  return synonymGroups.find(group=>group.includes(value))?.[0]||value;
+}
+export function indexedQuery(query:string){return [...new Set(terms(query).flatMap(t=>{const word=foldWord(t);return synonymGroups.find(g=>g.includes(word))||[t];}))].join(" OR ");}
+const words=(text:string)=>new Set((normalize(text).match(/[\p{L}\p{N}]+/gu)||[]).map(foldWord));
 function passages(text:string){const parts:string[]=[];let start=0;while(start<text.length){let end=Math.min(start+1200,text.length);if(end<text.length){const boundary=text.lastIndexOf("\n",end);if(boundary>start+500)end=boundary;}parts.push(text.slice(start,end));start=end;}return parts.length?parts:[""];}
 export type SearchHit={id:string;title:string;kind:string;summary:string;excerpt:string;matched_terms:string[];context:ReturnType<typeof contextOf>;fields:Record<string,unknown>;links:PublishedRecord["links"];revision:number;url?:string;markdown_url?:string};
-export function searchKnowledge(snapshot:Snapshot,query:string,options:{limit?:number;kind?:string;type?:string;topic?:string;base?:string;release_id?:string}={}){
-  const tokens=terms(query),limit=Math.min(20,Math.max(1,options.limit||8));
+export function searchKnowledge(snapshot:Snapshot,query:string,options:{limit?:number;kind?:string;type?:string;topic?:string;base?:string;release_id?:string;indexedMatches?:boolean}={}){
+  const tokens=[...new Set(terms(query).map(foldWord))],limit=Math.min(20,Math.max(1,options.limit||8));
   if(!tokens.length)return {query,results:[] as SearchHit[],total:0,matched:false};
   const docs=snapshot.records.filter(r=>(!options.kind||r.kind===options.kind)&&(!options.type||matchesType(r,options.type))&&(!options.topic||contextOf(r.context).topics.some(t=>normalize(t)===normalize(options.topic!))));
   const corpus=docs.map(r=>{const c=contextOf(r.context);return {r,c,head:words([r.title,entryType(r),c.attribution||"",...c.aliases,...c.topics,c.summary].join(" ")),body:words(r.text+" "+Object.entries(r.fields).map(([k,v])=>k+" "+(v===null?"unknown":String(v))).join(" "))};});
@@ -21,7 +32,7 @@ export function searchKnowledge(snapshot:Snapshot,query:string,options:{limit?:n
     const pin=options.release_id?"&release="+encodeURIComponent(options.release_id):"";
     const url=options.base?`${options.base}/records/${r.id}${options.release_id?"?release="+encodeURIComponent(options.release_id):""}`:undefined;
     return {score,hit:{id:r.id,title:r.title,kind:r.kind,summary:c.summary,excerpt,matched_terms:matched,context:c,fields:r.fields,links:r.links||[],revision:r.revision,...(url?{url,markdown_url:`${options.base}/records/${r.id}?format=md${pin}`}:{})}};
-  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.hit.id.localeCompare(b.hit.id));
+  }).filter(x=>x.score>0||options.indexedMatches).sort((a,b)=>b.score-a.score||(options.indexedMatches?0:a.hit.id.localeCompare(b.hit.id)));
   return {query,results:ranked.slice(0,limit).map(x=>x.hit),total:ranked.length,matched:ranked.length>0};
 }
 export type RetrievalCase={id:string;question:string;expected_record_id:string|null;expectation:"find"|"no_match"};

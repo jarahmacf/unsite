@@ -9,13 +9,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Choice, Pill } from "./shared";
 import type { Space } from "@/lib/production/types";
 
-export type WorkspaceTab = "overview" | "sources" | "knowledge" | "review" | "agents" | "publish" | "settings";
+export type WorkspaceTab = "overview" | "sources" | "knowledge" | "review" | "agents" | "visibility" | "publish" | "settings";
 export const workspaceNavigation = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "sources", label: "Sources", icon: FileText },
   { id: "knowledge", label: "Knowledge", icon: BookOpen },
   { id: "review", label: "Review", icon: CheckCheck },
   { id: "agents", label: "Agent access", icon: FlaskConical },
+  { id: "visibility", label: "Visibility", icon: ShieldCheck },
   { id: "publish", label: "Publish", icon: Globe },
 ] as const;
 

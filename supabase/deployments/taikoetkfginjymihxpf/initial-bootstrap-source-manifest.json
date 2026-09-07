@@ -1,0 +1,56 @@
+{
+  "purpose": "Initial Unsite schema for an empty Supabase project",
+  "applied": false,
+  "requires": "Managed Supabase Auth and Storage schemas; no source project credentials or customer data are included",
+  "sources": [
+    {
+      "path": "supabase/migrations/20260905013717_unsite_publications.sql",
+      "sha256": "cf34c8e183e107727d57180ab48f1fd7ec10cde4eacb72d11bb669dc0e495a71"
+    },
+    {
+      "path": "supabase/migrations/20260905025957_unsite_production_foundation.sql",
+      "sha256": "a486074283bca9bc9cdcbf5f8d4a98f7fde1972f1f0aed0d712731860561b65e"
+    },
+    {
+      "path": "supabase/migrations/20260905030809_unsite_worker_schedule.sql",
+      "sha256": "42c08dc4fcd63c5ede34861a51fb1ab7cf01f2d5ec66784e52ff2f1ce4502b2c"
+    },
+    {
+      "path": "supabase/migrations/20260905031347_unsite_worker_checkpoint.sql",
+      "sha256": "fc3d87835f6795ac919590f9db045debdba32c7775a7649e537bf0c86ee52654"
+    },
+    {
+      "path": "supabase/migrations/20260905033810_unsite_network_extension_namespace.sql",
+      "sha256": "c89aaf5d29a46b3ab86ac5ceeff291aef49cadf380b8a09549bbf53a4464e0bd"
+    },
+    {
+      "path": "supabase/migrations/20260905043535_unsite_ai_authorization.sql",
+      "sha256": "589856f26b597032dd17d8ba3ed88a4f6808633f4c2ff8100618c302f813e37d"
+    },
+    {
+      "path": "supabase/migrations/20260905044327_unsite_ai_attempt_recovery.sql",
+      "sha256": "54633d211a72e4f02c836112545cee6ccdffb4df520baaebc4b4458279995243"
+    },
+    {
+      "path": "supabase/migrations/20260905183037_unsite_linked_knowledge.sql",
+      "sha256": "1dfefd66619790f14532f0cad05b85b7fb960a7582d5efc0f7abced0f01fe78e"
+    },
+    {
+      "path": "supabase/migrations/20260905185711_unsite_linked_command_scope.sql",
+      "sha256": "7500e6953a557e43db71c04d174de0c303b785bc7bd42e1acc9d4aed7846defa"
+    },
+    {
+      "path": "supabase/migrations/20260905185808_unsite_context_validator_scope.sql",
+      "sha256": "5a1d68d621f383580b60c1a4e041664a4270cb1479a7d63c9dc7804f36af2ffc"
+    },
+    {
+      "path": "supabase/migrations/20260905205859_unsite_universal_context.sql",
+      "sha256": "ddbe2edf349a82956c068c1e954b9bc2962b87c27f5c987b2aaaf6951e77b1bd"
+    },
+    {
+      "path": "supabase/pending/collection-coordination.sql",
+      "sha256": "11c22600268736d52f90d5172d572f681b9c49159b9093a366ed019c033d5cfa"
+    }
+  ],
+  "bootstrap_sha256": "5ef4ff8449eecb38963e18a19faea809e9a42b3d5151eb82519446f831c959e0"
+}

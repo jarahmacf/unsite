@@ -9,6 +9,7 @@ import { Overview } from "@/components/unsite/overview";
 import { Knowledge, Review } from "@/components/unsite/knowledge";
 import { AgentLab } from "@/components/unsite/agent-lab";
 import { Presence } from "@/components/unsite/presence";
+import {Visibility} from "@/components/unsite/visibility";
 import { Action, ApiProvider, Busy, ErrorNotice, Modal, type Command } from "@/components/unsite/shared";
 import type { RuntimeStatus } from "@/lib/production/types";
 import { sampleState } from "./fixtures";
@@ -55,6 +56,7 @@ function SampleWorkspace({ onReset }: { onReset: () => void }) {
       {tab === "knowledge" && <Knowledge state={state} canEdit command={command} />}
       {tab === "review" && <Review state={state} canEdit command={command} />}
       {tab === "agents" && <AgentLab state={state} status={status} canEdit command={command} sample />}
+      {tab === "visibility" && <Visibility state={state} status={status} canEdit isOwner command={command} sample />}
       {tab === "publish" && <Presence state={state} status={status} isOwner command={command} sample />}
       {tab === "settings" && <Settings sample state={state} status={status} user={user} canEdit command={command} signOut={onReset} />}
     </WorkspaceShell>

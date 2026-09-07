@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Source, SourceKind, SourceVersion, SpaceState } from "@/lib/production/types";
-import { AI_DISCLOSURE_VERSION } from "@/lib/production/ai-consent";
 import { Action, Busy, bytes, Empty, ErrorNotice, External, Field, Modal, Pill, stamp, type Command } from "./shared";
 import { CollectionPreparation } from "./collection-preparation";
 import { AiPreparationDialog } from "./ai-preparation";
@@ -47,7 +46,6 @@ export function AddSource({ spaceId, open, onClose, onSaved, existing, aiAvailab
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
-  const [aiApproved, setAiApproved] = useState(false);
   const requests = useRef(new Map<string, string>());
   const completed = useRef(new Map<string, string>());
 
@@ -63,12 +61,6 @@ export function AddSource({ spaceId, open, onClose, onSaved, existing, aiAvailab
     setError(incoming.length > limit ? `Choose up to ${limit} file${limit === 1 ? "" : "s"} at a time. The first ${limit} ${limit === 1 ? "is" : "are"} selected.` : "");
     setFiles(incoming.slice(0, limit));
   }
-  async function prepareVersion(versionId: string) {
-    if (aiApproved && aiAvailable) await gateway.request("/api/app/prepare_source", {
-      space_id: spaceId, version_id: versionId, approved: true,
-      disclosure_version: AI_DISCLOSURE_VERSION, request_id: requestId("ai:" + versionId),
-    });
-  }
   async function submit(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError("");
     try {
@@ -77,7 +69,7 @@ export function AddSource({ spaceId, open, onClose, onSaved, existing, aiAvailab
         for (let index = 0; index < files.length; index++) {
           const file = files[index], fileId = file.name + ":" + file.size + ":" + file.lastModified;
           const saved = completed.current.get(fileId);
-          if (saved) { await prepareVersion(saved); continue; }
+          if (saved) continue;
           setProgress(`Saving ${index + 1} of ${files.length}: ${file.name}`);
           const result = await gateway.request<{ result: SourceVersion; upload: { signedUrl: string }; uploadComplete: boolean }>("/api/app/source_intake", {
             space_id: spaceId, title: existing?.title || file.name, kind: "file", mime_type: mime(file),
@@ -88,7 +80,6 @@ export function AddSource({ spaceId, open, onClose, onSaved, existing, aiAvailab
             await gateway.request("/api/app/complete_upload", { space_id: spaceId, version_id: result.result.id });
           }
           completed.current.set(fileId, result.result.id);
-          await prepareVersion(result.result.id);
         }
       } else {
         setProgress("Saving your source…");
@@ -97,7 +88,6 @@ export function AddSource({ spaceId, open, onClose, onSaved, existing, aiAvailab
           kind: tab, request_id: requestId(tab + title + url + text), ...(existing ? { source_id: existing.id } : {}),
           ...(tab === "url" ? { origin_url: url } : { text_content: text, mime_type: "text/plain", byte_size: new TextEncoder().encode(text).length }),
         });
-        await prepareVersion(result.result.id);
       }
       await onSaved(); onClose();
     } catch (caught) {
@@ -107,7 +97,7 @@ export function AddSource({ spaceId, open, onClose, onSaved, existing, aiAvailab
     } finally { setBusy(false); setProgress(""); }
   }
 
-  return <Modal open={open} dirty={files.length>0||title!==(existing?.title||"")||url!==(existing?.origin_url||"")||!!text||aiApproved} onClose={() => !busy && onClose()} title={existing ? "Add a new version" : "Add sources"} description={existing ? "Keep the latest context together with its history. Previous versions are preserved." : "Bring your documents, pages, and notes into one private workspace."}>
+  return <Modal open={open} dirty={files.length>0||title!==(existing?.title||"")||url!==(existing?.origin_url||"")||!!text} onClose={() => !busy && onClose()} title={existing ? "Add a new version" : "Add sources"} description={existing ? "Keep the latest context together with its history. Previous versions are preserved." : "Bring your documents, pages, and notes into one private workspace."}>
     <form onSubmit={submit}>
       <fieldset disabled={busy}>
         <Tabs value={tab} onValueChange={value => { if (!existing) { setTab(value as SourceKind); setError(""); } }}>
@@ -137,11 +127,7 @@ export function AddSource({ spaceId, open, onClose, onSaved, existing, aiAvailab
             <Field label="Your text" hint={text.length.toLocaleString() + " / 200,000 characters"}>{id => <Textarea id={id} rows={8} required={tab === "text"} maxLength={200000} value={text} onChange={event => setText(event.target.value)} placeholder="Paste the context you want to keep." />}</Field>
           </TabsContent>
         </Tabs>
-        <details className="us-ai-optional">
-          <summary><Sparkles size={16} />AI preparation <Pill>Optional</Pill><ChevronDown size={14} /></summary>
-          {aiAvailable ? <label className="us-check us-ai-optin"><input type="checkbox" checked={aiApproved} onChange={event => setAiApproved(event.target.checked)} /><span><strong>Prepare these source versions with AI</strong><small>I approve sending their extracted text to OpenAI to create knowledge suggestions. This may include private information. Suggestions stay private until I review and publish them.</small></span></label>
-            : <p>Save your sources now. AI preparation can be connected later.</p>}
-        </details>
+        <p className="us-small us-muted">{aiAvailable ? "After saving, prepare one or more sources together with curation and evidence checks. You will review the AI disclosure before a run starts." : "Save your sources now. AI preparation can be connected later."}</p>
       </fieldset>
       <ErrorNotice message={error} />
       <div className="us-modal-actions"><span className="us-muted us-small"><ShieldCheck size={16} />{gateway.sample ? "Sample data only" : "Private by default"}</span>
@@ -263,7 +249,7 @@ export function Sources({ state, command, reload, canEdit, aiAvailable = true, g
                 {job?.error_message && job.error_code !== "AI_APPROVAL_REQUIRED" && <div className="us-notice">{job.error_message}</div>}
                 <div className="us-inline-actions">
                   <button type="button" onClick={() => void openVersion(version)} aria-current={detail?.version.id === version.id ? "true" : undefined}>View original<ChevronRight size={14} /></button>
-                  {canEdit && aiAvailable && job && job.status !== "completed" && (!["queued", "running"].includes(job.status) || !approved) && !selected.archived_at && <button type="button" disabled={!!busy} onClick={() => setAiDialog({ version, title: selected.title, mode: "prepare" })}><Sparkles size={14} />{approved ? "Retry preparation" : "Prepare with AI"}</button>}
+                  {canEdit && aiAvailable && job && (!["queued", "running"].includes(job.status) || !approved) && !selected.archived_at && <button type="button" disabled={!!busy} onClick={() => setAiDialog({ version, title: selected.title, mode: "prepare" })}><Sparkles size={14} />{approved ? "Retry preparation" : "Prepare with AI"}</button>}
                   {canEdit && job && ["failed", "cancelled"].includes(job.status) && !approved && !selected.archived_at && <button type="button" disabled={!!busy} onClick={() => void act("retry_job", { job_id: job.id })}><RefreshCw size={14} />Retry reading</button>}
                   {canEdit && job && approved && !selected.archived_at && <button type="button" disabled={!!busy} onClick={() => setAiDialog({ version, title: selected.title, mode: "stop" })}><X size={14} />Stop AI preparation</button>}
                   {canEdit && job && ["queued", "running"].includes(job.status) && !approved && <button type="button" disabled={!!busy} onClick={() => void act("cancel_job", { job_id: job.id })}><X size={14} />Cancel reading</button>}

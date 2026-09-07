@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
 import type {WorkspaceTab} from "./workspace-shell";
-const tabs=new Set(["overview","sources","knowledge","review","agents","publish","settings"]);
+const tabs=new Set(["overview","sources","knowledge","review","agents","visibility","publish","settings"]);
 export function useWorkspaceTab(){
   const [tab,update]=useState<WorkspaceTab>("overview");
   useEffect(()=>{const read=()=>{const value=new URLSearchParams(location.search).get("tab")||"overview";update(tabs.has(value)?value as WorkspaceTab:"overview");};read();window.addEventListener("popstate",read);return()=>window.removeEventListener("popstate",read);},[]);

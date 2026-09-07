@@ -42,3 +42,14 @@ Security advisors reported no warnings or errors. The two informational [RLS-wit
 - Custom domains, billing, social scanning, OCR/media adapters and outbound delivery are optional product expansions, not completed features of this release.
 
 The UI preview branch remains `ui/foundation-and-sources` in `jarahmacf/unsite`, in draft PR #1. A preview is not a promotion of the production `main` branch.
+
+### Final deployment checks
+
+- Final application commit: `e36dd251e3eab25db9e46559c33708c3a5e3ebc8`, exported from source `f1671795b2baec9eadb2d9c0719a784f58e6c1d2`. Timestamp-based pagination also sorts by unique ID.
+- Vercel deployment `dpl_4cwSkiLaGXC5W16sep3mZnxuXjbf` reached READY at `https://unsite-jzqxjpef2-jarah-1573.vercel.app`.
+- Status-only HTTP checks with a fresh share link and cookie jar reached `/demo` with HTTP 200 on the deployment host. No page HTML or browser interaction was inspected.
+- Production `https://unsite.vercel.app/api/auth` returns HTTP 200 with `user: null`, confirming its basic Supabase account configuration is present.
+- The preview's `/api/auth` and `/api/app/record-directory` return HTTP 503, `Account services are not configured.` At least one required Supabase URL/key runtime value is missing in Preview. The local demo remains functional because it does not use these APIs.
+- The connected Vercel tools expose project/deployment reads and deployment actions, but no environment-variable write action. No authenticated local Vercel CLI or token is available. Configure the intended Preview database environment in Vercel before testing signed-in preview flows; do not silently place production secrets into preview code. Production rollout remains a separate step after UI review.
+
+When generating a Vercel share link, fetch that exact link with a cookie jar. The `web_fetch_vercel_url` helper can regenerate the share token and invalidate an earlier link. The final user-facing share link was independently reached with HTTP 200 after generation.

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import {presenceCommands} from "./presence";
 import {COLLECTION_DISCLOSURE_VERSION} from "./collection";
 import {AI_DISCLOSURE_VERSION} from "./ai-consent";
 import {RELATIONS,KNOWLEDGE_STATES,FRAMINGS,validContext} from "./knowledge";
@@ -14,6 +15,7 @@ export const sourceInput=z.object({space_id:uuid,title:name,kind:z.enum(["file",
   if(v.kind==="file"&&!['text/plain','text/markdown','application/json','application/pdf'].includes(v.mime_type))c.addIssue({code:"custom",message:"Use a PDF, text, Markdown, or JSON file."});
 });
 export const commandSchemas={
+  ...presenceCommands,
   restore_source:z.object({space_id:uuid,source_id:uuid}),
   create_invitation:z.object({space_id:uuid,email:z.string().trim().email().max(254),role:z.enum(["editor","viewer"]),token:z.string().regex(/^[0-9a-f]{64}$/),request_id:uuid}),
   accept_invitation:z.object({invitation_id:uuid,token:z.string().regex(/^[0-9a-f]{64}$/)}),

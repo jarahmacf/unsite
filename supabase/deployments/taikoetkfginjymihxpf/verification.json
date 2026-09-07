@@ -1,0 +1,141 @@
+{
+  "project_id": "taikoetkfginjymihxpf",
+  "database_suites": {
+    "production-isolation": {
+      "status": "passed",
+      "transaction": "rolled_back",
+      "real_provider_calls": false
+    },
+    "ai-authorization": {
+      "status": "passed",
+      "transaction": "rolled_back",
+      "real_provider_calls": false
+    },
+    "linked-knowledge": {
+      "status": "passed",
+      "transaction": "rolled_back",
+      "real_provider_calls": false
+    },
+    "universal-knowledge": {
+      "status": "passed",
+      "transaction": "rolled_back",
+      "real_provider_calls": false
+    },
+    "collection-coordination": {
+      "status": "passed",
+      "transaction": "rolled_back",
+      "real_provider_calls": false
+    },
+    "workspace-controls": {
+      "status": "passed",
+      "transaction": "rolled_back",
+      "real_provider_calls": false,
+      "checked_at": "2026-09-07"
+    }
+  },
+  "verified_defect": {
+    "function": "public.unsite_collection_result",
+    "sqlstate": "42702",
+    "cause": "Unqualified value columns in planning and curation JSON lateral joins",
+    "correction": "Qualify source_item.value in both coverage queries",
+    "migration": "20260905223726",
+    "collection_retest": "passed"
+  },
+  "security": {
+    "errors": 0,
+    "warnings": 0,
+    "informational": [
+      {
+        "code": "rls_enabled_no_policy",
+        "table": "public.unsite_worker_credentials",
+        "assessment": "Deliberately service-only; neither anon nor authenticated has SELECT.",
+        "reference": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+      },
+      {
+        "code": "rls_enabled_no_policy",
+        "table": "public.unsite_invitations",
+        "assessment": "No direct customer table privileges. Guarded role-checked functions expose safe metadata; token hashes stay private.",
+        "reference": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+      }
+    ],
+    "public_tables_without_rls": 0
+  },
+  "http_checks": [
+    {
+      "check": "public_health",
+      "status": 200
+    },
+    {
+      "check": "worker_anonymous",
+      "status": 401
+    },
+    {
+      "check": "worker_gateway_only",
+      "status": 401
+    },
+    {
+      "check": "worker_authenticated",
+      "status": 200,
+      "model_configured": false
+    },
+    {
+      "check": "worker_browser_origin",
+      "status": 403
+    },
+    {
+      "check": "final_ui_preview_demo",
+      "status": 200,
+      "commit": "e36dd251e3eab25db9e46559c33708c3a5e3ebc8",
+      "verified_at": "2026-09-07"
+    },
+    {
+      "check": "production_account_configuration",
+      "status": 200,
+      "user": null,
+      "verified_at": "2026-09-07"
+    },
+    {
+      "check": "preview_account_configuration",
+      "status": 503,
+      "error": "Account services are not configured.",
+      "verified_at": "2026-09-07"
+    }
+  ],
+  "fixtures_remaining": {
+    "auth_users": 0,
+    "spaces": 0,
+    "collection_runs": 0
+  },
+  "worker": {
+    "gateway_jwt_verification": true,
+    "additional_scoped_credential": true,
+    "active_credentials": 1,
+    "schedule": "unsite-process-sources",
+    "individual_jobs": true,
+    "collection_runs": true
+  },
+  "remaining": [
+    "OPENAI_API_KEY secret",
+    "Real account/email walkthrough and production email configuration",
+    "Browser interaction and accessibility checks",
+    "Explicitly approved live mixed-source processing and model-quality evaluation",
+    "Review and promote UI preview branch when accepted",
+    "Configure the intended Preview Supabase runtime environment before signed-in preview tests; Vercel environment mutation is unavailable through the connected tools."
+  ],
+  "functions": {
+    "unsite": {
+      "id": "305052b1-1ede-4c11-94fe-9364a3102f5e",
+      "version": 1,
+      "status": "ACTIVE",
+      "verify_jwt": false,
+      "bundle_sha256": "0b0cff78b13fd0d434bc4fc67e0874d7fb05b0b05f459ef44523f5f459166756"
+    },
+    "unsite-worker": {
+      "id": "71b79ccc-bd1d-46b3-9ee0-57d52c650f57",
+      "version": 1,
+      "status": "ACTIVE",
+      "verify_jwt": true,
+      "bundle_sha256": "a99fd17e34bc55f56c2cb3e4f112dff91dac5cf262b2c9fac36585233ef6f429"
+    }
+  }
+}

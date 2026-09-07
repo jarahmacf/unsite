@@ -2,11 +2,16 @@ import {env} from "./runtime-env";
 import { createServerClient, parseCookieHeader, serializeCookieHeader } from "@supabase/ssr";
 import { z } from "zod";
 export class AppError extends Error { constructor(public status:number,message:string){super(message);} }
+export function publicRuntime(){
+  const e=env as unknown as Record<string,string|undefined>;
+  if(!e.UNSITE_SUPABASE_URL)throw new AppError(503,"Public delivery is not configured.");
+  return {base:e.UNSITE_SUPABASE_URL.replace(/\/$/,"")+"/functions/v1/unsite",origin:(e.UNSITE_PUBLIC_ORIGIN||"https://unsite.vercel.app").replace(/\/$/,"")};
+}
 export function runtime() {
   const e=env as unknown as Record<string,string|undefined>;
   const url=e.UNSITE_SUPABASE_URL,key=e.UNSITE_SUPABASE_PUBLISHABLE_KEY;
   if(!url||!key)throw new AppError(503,"Account services are not configured.");
-  return {url,key,origin:e.UNSITE_APP_ORIGIN||"",workerToken:e.UNSITE_WORKER_TOKEN||"",workerGatewayKey:e.UNSITE_WORKER_GATEWAY_KEY||"",workerUrl:url+"/functions/v1/unsite-worker",publicBase:url+"/functions/v1/unsite/v2"};
+  return {url,key,origin:e.UNSITE_APP_ORIGIN||"",publicOrigin:e.UNSITE_PUBLIC_ORIGIN||"https://unsite.vercel.app",workerToken:e.UNSITE_WORKER_TOKEN||"",workerGatewayKey:e.UNSITE_WORKER_GATEWAY_KEY||"",workerUrl:url+"/functions/v1/unsite-worker",publicBase:url+"/functions/v1/unsite/v2"};
 }
 export function requestClient(request:Request) {
   const config=runtime(),headers=new Headers({"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"});
@@ -38,8 +43,8 @@ export function apiError(error:unknown,headers?:Headers) {
 }
 export function databaseError(error:{code?:string;message:string}|null) {
   if(!error)return;
-  const known=["Invitation is unavailable for this account","Invitation is unavailable","Invitation has expired","Workspace member limit reached","This person already has access","Too many pending invitations","Owner access cannot be changed here","The workspace owner cannot leave","Member not found","Choose editor or viewer access","Invitation request already exists","Review the collection AI disclosure","Finish or stop the active collection run","Select one to eight source versions","Select each source version once","Source not found or upload incomplete","Collection knowledge limit reached","Collection run not found","Collection run is already complete","Only a paused collection run can resume","Review the retry notice","Collection run is not ready for review","Collection verification is incomplete","Review the verification concerns","Access denied","Workspace not found","Record changed","Source not found","Candidate not found","Upload is not complete","Workspace limit reached","No approved content","Review the publication","Review the AI disclosure","Job is already running","Request already exists"];
+  const known=["Owner access required","Publish a release before checking delivery","Wait five minutes before checking delivery again","Wait five minutes before checking again","Wait one minute before checking again","Add this domain again to create a new proof","Domain claim not found","Use up to ten domain claims","Use up to 200 resources","Choose an active web-page source","Resource not found","Use the time this observation actually happened","Invitation is unavailable for this account","Invitation is unavailable","Invitation has expired","Workspace member limit reached","This person already has access","Too many pending invitations","Owner access cannot be changed here","The workspace owner cannot leave","Member not found","Choose editor or viewer access","Invitation request already exists","Review the collection AI disclosure","Finish or stop the active collection run","Select one to eight source versions","Select each source version once","Source not found or upload incomplete","Collection knowledge limit reached","Collection run not found","Collection run is already complete","Only a paused collection run can resume","Review the retry notice","Collection run is not ready for review","Collection verification is incomplete","Review the verification concerns","Access denied","Workspace not found","Record changed","Source not found","Candidate not found","Upload is not complete","Workspace limit reached","No approved content","Review the publication","Review the AI disclosure","Job is already running","Request already exists"];
   const message=known.find(m=>error.message.includes(m));
-  if(message)throw new AppError(message==="Access denied"?403:message==="Record changed"?409:400,message+".");
+  if(message)throw new AppError(["Access denied","Owner access required"].includes(message)?403:message==="Record changed"?409:400,message+".");
   throw new AppError(503,"Your request could not be saved. Please try again.");
 }

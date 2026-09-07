@@ -11,6 +11,7 @@ import {CreateSpace,Settings} from "@/components/unsite/workspace-forms";
 import {Knowledge,Review} from "@/components/unsite/knowledge";
 import {AgentLab} from "@/components/unsite/agent-lab";
 import {Presence} from "@/components/unsite/presence";
+import {Visibility} from "@/components/unsite/visibility";
 import {Action,api,Busy,ErrorNotice,Modal,type Command} from "@/components/unsite/shared";
 import type {RuntimeStatus,Space,SpaceState} from "@/lib/production/types";
 type User={id:string;email:string};
@@ -43,6 +44,7 @@ export default function WorkspaceApp(){
           {tab==="knowledge"&&<Knowledge key={state.space.id} state={state} command={command} canEdit={canEdit}/>}
           {tab==="review"&&<Review key={state.space.id} state={state} command={command} canEdit={canEdit}/>}
           {tab==="agents"&&<AgentLab key={state.space.id} state={state} status={status} command={command} canEdit={canEdit}/>}
+          {tab==="visibility"&&<Visibility key={state.space.id} state={state} status={status} command={command} canEdit={canEdit} isOwner={role==="owner"}/>}
           {tab==="publish"&&<Presence key={state.space.id} state={state} status={status} command={command} isOwner={role==="owner"}/>}
           {tab==="settings"&&<Settings key={state.space.id} state={state} user={user} status={status} command={command} signOut={()=>void signOut()} canEdit={canEdit} onLeft={loadAccount}/>}
         </>}

@@ -5,10 +5,11 @@ import type { Snapshot } from "@/lib/production/release";
 import type { SourceGateway } from "@/components/unsite/source-gateway";
 import { sampleGateway, sampleState } from "./fixtures";
 import {filterDirectory,type WorkspaceInvitation,type WorkspaceMember} from "@/lib/production/workspace";
+import {emptyPublisher,presenceActions,type PresenceState,type Publisher,type PublicResource,type VisibilityObservation} from "@/lib/production/presence";
 
-export function demoSnapshot(state: SpaceState, links = new Map<string, KnowledgeLink[]>()): Snapshot {
+export function demoSnapshot(state: SpaceState, links = new Map<string, KnowledgeLink[]>(),presence?:PresenceState): Snapshot {
   return { schema_version: "2.1", id: state.space.id, name: state.space.name, kind: state.space.kind, description: state.space.description, contact_email: state.space.contact_email,
-    records: state.records.filter(record => record.active).map(record => ({ id: record.id, title: record.title, kind: record.kind, text: record.text, fields: record.fields, context: record.context, source_url: record.public_source_url, revision: record.revision, updated_at: record.updated_at, links: links.get(record.id) || [] })) };
+    records: state.records.filter(record => record.active).map(record => ({ id: record.id, title: record.title, kind: record.kind, text: record.text, fields: record.fields, context: record.context, source_url: record.public_source_url, revision: record.revision, updated_at: record.updated_at, links: links.get(record.id) || [] })),...(presence?{publisher:presence.publisher,resources:presence.resources.filter(r=>r.active)}:{}) };
 }
 
 // This adapter contains only local sample operations. It has no live API fallback,
@@ -18,6 +19,7 @@ export function workspaceGateway(getState: () => SpaceState, update: (next: Spac
   const links = new Map<string, KnowledgeLink[]>();
   const releases = new Map<string, Release>();
   const requests = new Map<string, unknown>();
+  const presence:PresenceState={publisher:emptyPublisher(),claims:[],resources:[],monitors:[],changes:[],observations:[]};
   let invitations:WorkspaceInvitation[]=[];
   let members:WorkspaceMember[]=[{user_id:"sample-owner",email:"preview@example.com",role:"owner",created_at:getState().space.created_at},{user_id:"sample-editor",email:"alex@example.com",role:"editor",created_at:getState().space.created_at}];
   let cases: RetrievalCase[] = [{ id: "sample-case", question: "What design services does the studio offer?", expected_record_id: "sample-record-1", expectation: "find" }];
@@ -44,7 +46,24 @@ export function workspaceGateway(getState: () => SpaceState, update: (next: Spac
         revision: (previous?.revision || 0) + 1, active: payload.active === undefined ? previous?.active ?? true : Boolean(payload.active), updated_at: new Date().toISOString() };
     }
 
-    if(route==="/api/app/workspace-settings"){
+    if(route==="/api/app/presence"){
+      result=structuredClone(presence);
+    }else if(presenceActions.includes(route.split("/").pop()||"")){
+      const action=route.split("/").pop()!,now=new Date().toISOString();
+      if(action==="save_publisher")presence.publisher={...payload,revision:presence.publisher.revision+1} as Publisher;
+      else if(action==="save_resource"){const old=presence.resources.find(r=>r.id===payload.id);presence.resources=[...presence.resources.filter(r=>r.id!==payload.id),{...payload,revision:(old?.revision||0)+1} as PublicResource];}
+      else if(action==="claim_domain"){
+        const domain=String(payload.domain).replace(/^https:\/\//,"").replace(/\/$/,"");
+        presence.claims=presence.claims.filter(c=>c.domain!==domain);presence.claims.push({id:crypto.randomUUID(),domain,challenge:"sample-proof-do-not-add-to-dns",status:"pending",checked_at:null,verified_at:null,expires_at:null,next_check_at:null,error_message:"DNS is not checked in the sample workspace."});
+      }else if(action==="revoke_domain")presence.claims=presence.claims.map(c=>c.id===payload.claim_id?{...c,status:"revoked",expires_at:now}:c);
+      else if(action==="check_domain")presence.claims=presence.claims.map(c=>c.id===payload.claim_id?{...c,error_message:"DNS is not checked in the sample workspace."}:c);
+      else if(action==="save_monitor"||action==="check_source"){
+        const old=presence.monitors.find(m=>m.source_id===payload.source_id);
+        presence.monitors=[...presence.monitors.filter(m=>m.source_id!==payload.source_id),{source_id:String(payload.source_id),cadence:(payload.cadence||old?.cadence||"off") as "off"|"daily"|"weekly",last_checked_at:null,last_changed_at:null,next_check_at:null,failures:0,error_message:"The sample does not check external pages."}];
+      }else if(action==="save_observation")presence.observations=[{...payload,id:crypto.randomUUID()} as VisibilityObservation,...presence.observations];
+      else if(action==="delete_observation")presence.observations=presence.observations.filter(o=>o.id!==payload.observation_id);
+      save(state,action,["save_publisher","save_resource"].includes(action));result={result:{}};
+    }else if(route==="/api/app/workspace-settings"){
       result={members,invitations,usage:{sources:state.sources.filter(s=>!s.archived_at).length,archived_sources:state.sources.filter(s=>s.archived_at).length,versions:state.versions.length,stored_bytes:state.versions.filter(v=>v.storage_path).reduce((n,v)=>n+v.byte_size,0),records:state.records.length,included_records:state.records.filter(r=>r.active).length,pending_reviews:state.candidates.length,releases:state.releases.length,events:state.activity.length}};
     }else if(route==="/api/app/workspace-export"){
       result={format:"unsite-workspace-1",sample:true,exported_at:new Date().toISOString(),space:state.space,records:state.records,relationships:[...links].flatMap(([record_id,values])=>values.map(link=>({record_id,...link}))),sources:state.sources,source_versions:state.versions.map(({storage_path:_path,...version})=>version),review:state.candidates,evidence_history:[],releases:[...releases.values()],note:"Sample export. Original uploads remain in Sources."};
@@ -68,7 +87,7 @@ export function workspaceGateway(getState: () => SpaceState, update: (next: Spac
       members=route.endsWith("remove_member")?members.filter(m=>m.user_id!==payload.user_id):members.map(m=>m.user_id===payload.user_id?{...m,role:payload.role as "editor"|"viewer"}:m);
       save({...state,memberships:members.map(({user_id,role})=>({user_id,role}))},route.split("/").pop()!,false);result={result:{}};
     }else if (route === "/api/app/knowledge") {
-      result = { snapshot: demoSnapshot(state, links), source_revision: state.space.content_revision, cases };
+      result = { snapshot: demoSnapshot(state, links,presence), source_revision: state.space.content_revision, cases };
     } else if (route === "/api/app/record") {
       const record = state.records.find(item => item.id === url.searchParams.get("id"));
       if (!record) throw new Error("That sample entry no longer exists.");
@@ -108,7 +127,7 @@ export function workspaceGateway(getState: () => SpaceState, update: (next: Spac
       result = { result: next.space };
     } else if (route === "/api/app/publish_release") {
       if (!payload.reviewed || payload.revision !== state.space.content_revision) throw new Error("Review the latest sample content before simulating a release.");
-      const release: Release = { id: crypto.randomUUID(), space_id: state.space.id, revision: state.releases.length + 1, source_revision: state.space.content_revision, published_at: new Date().toISOString(), created_by: "sample-owner", summary: String(payload.summary || "Sample release"), data: structuredClone(demoSnapshot(state, links)) };
+      const release: Release = { id: crypto.randomUUID(), space_id: state.space.id, revision: state.releases.length + 1, source_revision: state.space.content_revision, published_at: new Date().toISOString(), created_by: "sample-owner", summary: String(payload.summary || "Sample release"), data: structuredClone(demoSnapshot(state, links,presence)) };
       releases.set(release.id, release);
       const { data: _data, ...metadata } = release;
       save({ ...state, releases: [metadata, ...state.releases], space: { ...state.space, active_release_id: release.id } }, "publish_release", false);
@@ -127,7 +146,7 @@ export function workspaceGateway(getState: () => SpaceState, update: (next: Spac
     } else if (route === "/api/app/agent-check") {
       const published = url.searchParams.get("mode") === "published";
       const release = state.space.active_release_id ? releases.get(state.space.active_release_id) : undefined;
-      const snapshot = published && release ? release.data as Snapshot : demoSnapshot(state, links);
+      const snapshot = published && release ? release.data as Snapshot : demoSnapshot(state, links,presence);
       result = { mode: published ? "published" : "draft", source_revision: release && published ? release.source_revision : state.space.content_revision, inspection: inspectKnowledge(snapshot), cases: runRetrievalCases(snapshot, cases), transport: null };
     } else if (route === "/api/app/save_retrieval_case") {
       const item: RetrievalCase = { id: crypto.randomUUID(), question: String(payload.question), expectation: payload.expectation as RetrievalCase["expectation"], expected_record_id: payload.expected_record_id ? String(payload.expected_record_id) : null };

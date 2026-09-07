@@ -4,6 +4,7 @@ import {commandSchemas} from "@/lib/production/contracts";
 import {apiError,AppError,databaseError,readJson,requestClient,writeGuard,type AppContext} from "@/lib/production/supabase";
 import {inspectKnowledge,runRetrievalCases,type RetrievalCase} from "@/lib/production/retrieval";
 import type {Snapshot} from "@/lib/production/release";
+import {presenceActions} from "@/lib/production/presence";
 
 const uuid=z.string().uuid();
 async function authenticated(request:Request,ctx:AppContext){
@@ -25,11 +26,14 @@ export async function GET(request:Request){
     ctx=requestClient(request);await authenticated(request,ctx);
     const url=new URL(request.url),path=route(request),client=ctx.supabase;
     let result:unknown;
-    if(path==="spaces"){
+    if(path==="presence"){
+      const space=uuid.parse(url.searchParams.get("space"));
+      const {data,error}=await client.rpc("unsite_presence_state",{space_id:space});databaseError(error);result=data;
+    }else if(path==="spaces"){
       const {data,error}=await client.from("unsite_spaces").select("*").order("created_at");databaseError(error);result={spaces:data};
     }else if(path==="status"){
       const status=await worker(ctx);
-      result={storage:true,processing:Boolean(status?.worker),model:Boolean(status?.model),modelName:status?.modelName||null,publicBase:ctx.config.publicBase,domains:false};
+      result={storage:true,processing:Boolean(status?.worker),model:Boolean(status?.model),modelName:status?.modelName||null,publicBase:ctx.config.publicBase,publicOrigin:ctx.config.publicOrigin,domains:false};
     }else if(path==="state"){
       const spaceId=uuid.parse(url.searchParams.get("space"));
       const candidateLimit=z.coerce.number().int().min(100).max(1000).parse(url.searchParams.get("candidate_limit")||100);
@@ -144,7 +148,7 @@ export async function POST(request:Request){
     const action=route(request);
     if(!(action in commandSchemas))throw new AppError(404,"This command does not exist.");
     const payload=commandSchemas[action as keyof typeof commandSchemas].parse(await readJson(request));
-    const rpc=["restore_source","create_invitation","accept_invitation","revoke_invitation","update_member","remove_member","leave_workspace"].includes(action)?"unsite_workspace_command":["start_collection_run","cancel_collection_run","resume_collection_run"].includes(action)?"unsite_collection_command":["prepare_source","stop_preparation"].includes(action)?"unsite_ai_command":["save_retrieval_case","delete_retrieval_case"].includes(action)?"unsite_retrieval_case_command":"unsite_command";
+    const rpc=presenceActions.includes(action)?"unsite_presence_command":["restore_source","create_invitation","accept_invitation","revoke_invitation","update_member","remove_member","leave_workspace"].includes(action)?"unsite_workspace_command":["start_collection_run","cancel_collection_run","resume_collection_run"].includes(action)?"unsite_collection_command":["prepare_source","stop_preparation"].includes(action)?"unsite_ai_command":["save_retrieval_case","delete_retrieval_case"].includes(action)?"unsite_retrieval_case_command":"unsite_command";
     const {data,error}=await ctx.supabase.rpc(rpc,{action,payload});databaseError(error);
     let upload:unknown=null,uploadComplete=false;
     if(action==="source_intake"&&data.storage_path){
@@ -156,7 +160,7 @@ export async function POST(request:Request){
       }else databaseError(completed.error);
     }
     // Await only the worker's acknowledgement. Long work runs on its durable queue.
-    if(["source_intake","complete_upload","retry_job","prepare_source","start_collection_run","resume_collection_run"].includes(action)&&(!data.storage_path||uploadComplete))await worker(ctx,"POST");
+    if(["source_intake","complete_upload","retry_job","prepare_source","start_collection_run","resume_collection_run","claim_domain","check_domain","save_monitor","check_source","check_delivery"].includes(action)&&(!data.storage_path||uploadComplete))await worker(ctx,"POST");
     return Response.json({result:data,upload,uploadComplete},{headers:ctx.headers});
   }catch(e){return apiError(e,ctx?.headers);}
 }
