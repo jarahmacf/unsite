@@ -1,6 +1,6 @@
 "use client";
 import {useRef,useState} from "react";
-import {Sparkles} from "lucide-react";
+import {Sparkles} from "@/components/unsite/icons";
 import {AI_DISCLOSURE,AI_DISCLOSURE_VERSION,AI_STOP_DISCLOSURE} from "@/lib/production/ai-consent";
 import type {SourceVersion} from "@/lib/production/types";
 import {Action,Busy,ErrorNotice,Modal,Pill,type Command} from "./shared";

@@ -4,6 +4,7 @@ import { inspectKnowledge, runRetrievalCases, type RetrievalCase } from "@/lib/p
 import type { Snapshot } from "@/lib/production/release";
 import type { SourceGateway } from "@/components/unsite/source-gateway";
 import { sampleGateway, sampleState } from "./fixtures";
+import {filterDirectory,type WorkspaceInvitation,type WorkspaceMember} from "@/lib/production/workspace";
 
 export function demoSnapshot(state: SpaceState, links = new Map<string, KnowledgeLink[]>()): Snapshot {
   return { schema_version: "2.1", id: state.space.id, name: state.space.name, kind: state.space.kind, description: state.space.description, contact_email: state.space.contact_email,
@@ -17,6 +18,8 @@ export function workspaceGateway(getState: () => SpaceState, update: (next: Spac
   const links = new Map<string, KnowledgeLink[]>();
   const releases = new Map<string, Release>();
   const requests = new Map<string, unknown>();
+  let invitations:WorkspaceInvitation[]=[];
+  let members:WorkspaceMember[]=[{user_id:"sample-owner",email:"preview@example.com",role:"owner",created_at:getState().space.created_at},{user_id:"sample-editor",email:"alex@example.com",role:"editor",created_at:getState().space.created_at}];
   let cases: RetrievalCase[] = [{ id: "sample-case", question: "What design services does the studio offer?", expected_record_id: "sample-record-1", expectation: "find" }];
 
   return { sample: true, upload: sources.upload, async request<T>(path: string, body?: unknown): Promise<T> {
@@ -41,7 +44,30 @@ export function workspaceGateway(getState: () => SpaceState, update: (next: Spac
         revision: (previous?.revision || 0) + 1, active: payload.active === undefined ? previous?.active ?? true : Boolean(payload.active), updated_at: new Date().toISOString() };
     }
 
-    if (route === "/api/app/knowledge") {
+    if(route==="/api/app/workspace-settings"){
+      result={members,invitations,usage:{sources:state.sources.filter(s=>!s.archived_at).length,archived_sources:state.sources.filter(s=>s.archived_at).length,versions:state.versions.length,stored_bytes:state.versions.filter(v=>v.storage_path).reduce((n,v)=>n+v.byte_size,0),records:state.records.length,included_records:state.records.filter(r=>r.active).length,pending_reviews:state.candidates.length,releases:state.releases.length,events:state.activity.length}};
+    }else if(route==="/api/app/workspace-export"){
+      result={format:"unsite-workspace-1",sample:true,exported_at:new Date().toISOString(),space:state.space,records:state.records,relationships:[...links].flatMap(([record_id,values])=>values.map(link=>({record_id,...link}))),sources:state.sources,source_versions:state.versions.map(({storage_path:_path,...version})=>version),review:state.candidates,evidence_history:[],releases:[...releases.values()],note:"Sample export. Original uploads remain in Sources."};
+    }else if(route==="/api/app/record-directory"){
+      result=filterDirectory(state.records,url.searchParams.get("q")||"",url.searchParams.get("type")||"",url.searchParams.get("inclusion")||"all",Number(url.searchParams.get("offset")||0),Number(url.searchParams.get("limit")||24));
+    }else if(route==="/api/app/activity"){
+      const offset=Number(url.searchParams.get("offset")||0);result={items:state.activity.slice(offset,offset+50),count:state.activity.length};
+    }else if(route==="/api/app/candidates"){
+      const offset=Number(url.searchParams.get("offset")||0);result={items:state.candidates.slice(offset,offset+100),count:state.candidates.length};
+    }else if(route==="/api/app/restore_source"){
+      if(!state.sources.some(s=>s.id===payload.source_id))throw new Error("Source not found.");
+      save({...state,sources:state.sources.map(s=>s.id===payload.source_id?{...s,archived_at:null}:s)},"restore_source",false);result={result:{}};
+    }else if(route==="/api/app/create_invitation"){
+      if(members.some(m=>m.email.toLowerCase()===String(payload.email).trim().toLowerCase()))throw new Error("This person already has access.");
+      const invitation:WorkspaceInvitation={id:crypto.randomUUID(),email:String(payload.email).trim().toLowerCase(),role:payload.role as "editor"|"viewer",created_at:new Date().toISOString(),expires_at:new Date(Date.now()+7*86400000).toISOString(),accepted_at:null,revoked_at:null};
+      invitations=[invitation,...invitations];save(state,"create_invitation",false);result={result:invitation};
+    }else if(route==="/api/app/revoke_invitation"){
+      invitations=invitations.map(i=>i.id===payload.invitation_id?{...i,revoked_at:new Date().toISOString()}:i);save(state,"revoke_invitation",false);result={result:{}};
+    }else if(route==="/api/app/update_member"||route==="/api/app/remove_member"){
+      const member=members.find(m=>m.user_id===payload.user_id);if(!member||member.role==="owner")throw new Error("Owner access cannot be changed here.");
+      members=route.endsWith("remove_member")?members.filter(m=>m.user_id!==payload.user_id):members.map(m=>m.user_id===payload.user_id?{...m,role:payload.role as "editor"|"viewer"}:m);
+      save({...state,memberships:members.map(({user_id,role})=>({user_id,role}))},route.split("/").pop()!,false);result={result:{}};
+    }else if (route === "/api/app/knowledge") {
       result = { snapshot: demoSnapshot(state, links), source_revision: state.space.content_revision, cases };
     } else if (route === "/api/app/record") {
       const record = state.records.find(item => item.id === url.searchParams.get("id"));
@@ -78,6 +104,7 @@ export function workspaceGateway(getState: () => SpaceState, update: (next: Spac
     } else if (route === "/api/app/create_space") {
       const next = sampleState(true); next.space.name = String(payload.name); update(next);
       links.clear(); releases.clear(); requests.clear(); cases = [];
+      invitations=[];members=[{user_id:"sample-owner",email:"preview@example.com",role:"owner",created_at:next.space.created_at}];
       result = { result: next.space };
     } else if (route === "/api/app/publish_release") {
       if (!payload.reviewed || payload.revision !== state.space.content_revision) throw new Error("Review the latest sample content before simulating a release.");

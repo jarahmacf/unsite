@@ -11,7 +11,7 @@ export type SourceGateway = {
 export const liveSourceGateway: SourceGateway = {
   request: api,
   async upload(signedUrl, file, contentType) {
-    const uploaded = await fetch(signedUrl, { method: "PUT", headers: { "Content-Type": contentType, "x-upsert": "false" }, body: file });
+    const uploaded = await fetch(signedUrl, { method: "PUT", headers: { "Content-Type": contentType, "x-upsert": "false" }, body: file, signal: AbortSignal.timeout(120000) }).catch(() => { throw new Error(file.name + ": upload interrupted. Retry to continue; completed files are saved."); });
     // A retry may encounter an immutable object that was uploaded successfully.
     // complete_upload independently verifies its size before marking it complete.
     if (!uploaded.ok) {

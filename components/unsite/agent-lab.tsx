@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useRef,useState,type FormEvent} from "react";
-import {ArrowUpRight,BookOpen,Check,FlaskConical,Link2,Plus,Search,Trash2} from "lucide-react";
+import {ArrowUpRight,BookOpen,Check,FlaskConical,Link2,Plus,Search,Trash2} from "@/components/unsite/icons";
 import {Input} from "@/components/ui/input";
 import type {RuntimeStatus,SpaceState} from "@/lib/production/types";
 import {contextOf,entryType,relationLabels,statusLabels} from "@/lib/production/knowledge";

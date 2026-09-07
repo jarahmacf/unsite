@@ -2,7 +2,8 @@
 
 import { useRef, useState, useSyncExternalStore } from "react";
 import { AddSource, Sources, SourcesSkeleton } from "@/components/unsite/sources";
-import { WorkspaceShell, type WorkspaceTab } from "@/components/unsite/workspace-shell";
+import { WorkspaceShell } from "@/components/unsite/workspace-shell";
+import {useWorkspaceTab} from "@/components/unsite/workspace-navigation";
 import { CreateSpace, Settings } from "@/components/unsite/workspace-forms";
 import { Overview } from "@/components/unsite/overview";
 import { Knowledge, Review } from "@/components/unsite/knowledge";
@@ -21,7 +22,7 @@ const serverSnapshot = () => false;
 
 function SampleWorkspace({ onReset }: { onReset: () => void }) {
   const [state, setState] = useState(() => sampleState());
-  const [tab, setTab] = useState<WorkspaceTab>("overview");
+  const [tab, setTab] = useWorkspaceTab();
   const [adding, setAdding] = useState(false);
   const [creating, setCreating] = useState(false);
   const [scenario, setScenario] = useState("populated");
@@ -51,11 +52,11 @@ function SampleWorkspace({ onReset }: { onReset: () => void }) {
         <details className="us-demo-states"><summary>Explore source states</summary><div className="us-toolbar" aria-label="Preview scenarios">{["populated", "empty", "loading", "error"].map(value => <button type="button" className="us-button-secondary" aria-pressed={scenario === value} key={value} onClick={() => sourceScenario(value)}>{value.charAt(0).toUpperCase() + value.slice(1)}</button>)}</div></details>
         {scenario === "loading" ? <SourcesSkeleton /> : scenario === "error" ? <><ErrorNotice message="Your sources couldn’t load. Try again to reconnect to the workspace." /><Action secondary onClick={() => sourceScenario("populated")}>Try again</Action></> : <Sources key={state.space.id + ":" + sourceGeneration} state={state} canEdit aiAvailable={false} gateway={gateway} reload={reload} command={command} />}
       </>}
-      {tab === "knowledge" && <Knowledge state={state} canEdit command={command} loadMore={reload} />}
-      {tab === "review" && <Review state={state} canEdit command={command} loadMore={reload} />}
+      {tab === "knowledge" && <Knowledge state={state} canEdit command={command} />}
+      {tab === "review" && <Review state={state} canEdit command={command} />}
       {tab === "agents" && <AgentLab state={state} status={status} canEdit command={command} sample />}
       {tab === "publish" && <Presence state={state} status={status} isOwner command={command} sample />}
-      {tab === "settings" && <Settings state={state} status={status} user={user} canEdit command={command} signOut={onReset} />}
+      {tab === "settings" && <Settings sample state={state} status={status} user={user} canEdit command={command} signOut={onReset} />}
     </WorkspaceShell>
     {adding && <AddSource spaceId={state.space.id} open onClose={() => setAdding(false)} onSaved={reload} aiAvailable={false} gateway={gateway} />}
     {creating && <Modal open onClose={() => setCreating(false)} title="Create a sample workspace" description="Try an empty workspace. Reset the demo to return to the original sample."><CreateSpace onCreated={() => { setCreating(false); setTab("overview"); }} onCancel={() => setCreating(false)} /></Modal>}

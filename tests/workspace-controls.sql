@@ -1,0 +1,91 @@
+-- All fixtures, including auth accounts and queued work, are rolled back.
+begin;
+do $$
+declare
+  owner_id uuid:=gen_random_uuid(); outsider uuid:=gen_random_uuid(); viewer uuid:=gen_random_uuid(); unconfirmed uuid:=gen_random_uuid();
+  sid uuid; other_sid uuid; inv jsonb; first_inv jsonb; source_version jsonb; record_id uuid; result jsonb;
+  token text:=repeat('a',64); request_id uuid:=gen_random_uuid(); denied boolean; jobs_before integer; archived_source uuid;
+begin
+  insert into auth.users(id,aud,role,email,email_confirmed_at) values
+    (owner_id,'authenticated','authenticated',owner_id::text||'@example.invalid',now()),
+    (outsider,'authenticated','authenticated',outsider::text||'@example.invalid',now()),
+    (viewer,'authenticated','authenticated',viewer::text||'@example.invalid',now()),
+    (unconfirmed,'authenticated','authenticated',unconfirmed::text||'@example.invalid',null);
+  perform set_config('request.jwt.claim.sub',outsider::text,true);
+  set local role authenticated;
+  other_sid:=(public.unsite_command('create_space',jsonb_build_object('name','Other tenant','kind','collection','request_id',gen_random_uuid()))->>'id')::uuid;
+  perform public.unsite_command('create_record',jsonb_build_object('space_id',other_sid,'title','Cross tenant secret','kind','general','text','Never visible in the other workspace','fields','{}'::jsonb,'request_id',gen_random_uuid()));
+  perform set_config('request.jwt.claim.sub',owner_id::text,true);
+  sid:=(public.unsite_command('create_space',jsonb_build_object('name','Workspace controls fixture','kind','collection','request_id',gen_random_uuid()))->>'id')::uuid;
+  inv:=public.unsite_workspace_command('create_invitation',jsonb_build_object('space_id',sid,'email',upper(viewer::text||'@example.invalid'),'role','viewer','token',token,'request_id',request_id));
+  first_inv:=inv;
+  assert public.unsite_workspace_command('create_invitation',jsonb_build_object('space_id',sid,'email',viewer::text||'@example.invalid','role','viewer','token',token,'request_id',request_id))->>'id'=inv->>'id','invitation retry idempotent';
+  denied:=false;begin perform token_hash from public.unsite_invitations;exception when insufficient_privilege then denied:=true;end;assert denied,'hashes inaccessible through customer table API';
+  result:=public.unsite_workspace_settings(sid);
+  assert jsonb_array_length(result->'invitations')=1,'owner sees scoped invitation metadata';
+  assert result::text not like '%token_hash%' and result::text not like '%'||token||'%','settings never disclose invite credentials';
+  perform set_config('request.jwt.claim.sub',outsider::text,true);
+  denied:=false;begin perform public.unsite_workspace_settings(sid);exception when insufficient_privilege then denied:=true;end;assert denied,'cross-tenant settings denied';
+  denied:=false;begin perform public.unsite_workspace_export(sid);exception when insufficient_privilege then denied:=true;end;assert denied,'cross-tenant export denied';
+  denied:=false;begin perform public.unsite_record_directory(sid);exception when insufficient_privilege then denied:=true;end;assert denied,'cross-tenant search denied';
+  denied:=false;begin perform public.unsite_workspace_command('accept_invitation',jsonb_build_object('invitation_id',inv->>'id','token',token));exception when raise_exception then denied:=true;end;assert denied,'token alone cannot grant another email access';
+  perform set_config('request.jwt.claim.sub',viewer::text,true);
+  denied:=false;begin perform public.unsite_workspace_command('accept_invitation',jsonb_build_object('invitation_id',inv->>'id','token',repeat('b',64)));exception when raise_exception then denied:=true;end;assert denied,'incorrect invitation token denied';
+  assert (public.unsite_workspace_command('accept_invitation',jsonb_build_object('invitation_id',inv->>'id','token',token))->>'space_id')::uuid=sid,'matching confirmed account accepts';
+  assert (public.unsite_workspace_command('accept_invitation',jsonb_build_object('invitation_id',inv->>'id','token',token))->>'space_id')::uuid=sid,'acceptance retry idempotent';
+  assert (select role from public.unsite_memberships where space_id=sid and user_id=viewer)='viewer','invited role applied';
+  result:=public.unsite_workspace_settings(sid);assert jsonb_array_length(result->'members')=2 and result->'invitations'='[]'::jsonb,'viewer gets members but no invitations';
+  denied:=false;begin perform public.unsite_workspace_export(sid);exception when insufficient_privilege then denied:=true;end;assert denied,'viewer cannot export workspace';
+  denied:=false;begin perform public.unsite_workspace_command('create_invitation',jsonb_build_object('space_id',sid));exception when insufficient_privilege then denied:=true;end;assert denied,'viewer cannot invite';
+  perform set_config('request.jwt.claim.sub',owner_id::text,true);
+  denied:=false;begin perform public.unsite_workspace_command('update_member',jsonb_build_object('space_id',sid,'user_id',owner_id,'role','viewer'));exception when raise_exception then denied:=true;end;assert denied,'owner role immutable';
+  perform public.unsite_workspace_command('update_member',jsonb_build_object('space_id',sid,'user_id',viewer,'role','editor'));
+  source_version:=public.unsite_command('source_intake',jsonb_build_object('space_id',sid,'title','Archived original','kind','text','text_content','Original version stays intact.','request_id',gen_random_uuid()));
+  archived_source:=(source_version->>'source_id')::uuid;
+  perform public.unsite_command('archive_source',jsonb_build_object('space_id',sid,'source_id',archived_source));
+  select count(*) into jobs_before from public.unsite_jobs where space_id=sid;
+  perform set_config('request.jwt.claim.sub',viewer::text,true);
+  perform public.unsite_workspace_command('restore_source',jsonb_build_object('space_id',sid,'source_id',archived_source));
+  assert (select archived_at is null from public.unsite_sources where id=archived_source),'editor restores source';
+  assert (select count(*) from public.unsite_jobs where space_id=sid)=jobs_before,'restoration dispatches no processing';
+  assert (select text_content from public.unsite_source_versions where id=(source_version->>'id')::uuid)='Original version stays intact.','original preserved';
+  denied:=false;begin perform public.unsite_workspace_command('remove_member',jsonb_build_object('space_id',sid,'user_id',owner_id));exception when insufficient_privilege then denied:=true;end;assert denied,'editor cannot manage members';
+  denied:=false;begin perform public.unsite_workspace_export(sid);exception when insufficient_privilege then denied:=true;end;assert denied,'editor cannot export workspace';
+  reset role;
+  insert into public.unsite_records(space_id,created_by,title,kind,text,fields,request_id) select sid,owner_id,'Directory entry '||n,'general',case when n=205 then 'Needle beyond the first two hundred entries' else 'A fixture entry' end,'{}'::jsonb,gen_random_uuid() from generate_series(1,205) n;
+  set local role authenticated;
+  result:=public.unsite_record_directory(sid,'Needle');
+  assert (result->>'count')::integer=1 and result->'items'->0->>'title'='Directory entry 205','search covers beyond loaded page';
+  result:=public.unsite_record_directory(sid,'','','all',200,24);assert (result->>'count')::integer=205 and jsonb_array_length(result->'items')=5,'directory pagination';
+  result:=public.unsite_record_directory(sid,'Cross tenant');assert (result->>'count')::integer=0,'search excludes other tenant';
+  perform set_config('request.jwt.claim.sub',owner_id::text,true);
+  result:=public.unsite_workspace_export(sid);
+  assert jsonb_array_length(result->'records')=205 and jsonb_array_length(result->'source_versions')=1,'complete export';
+  assert result::text not like '%token_hash%' and result::text not like '%storage_path%' and result::text not like '%worker_credentials%' and result::text not like '%Cross tenant%','export excludes credentials and other tenants';
+  perform public.unsite_workspace_command('remove_member',jsonb_build_object('space_id',sid,'user_id',viewer));
+  perform set_config('request.jwt.claim.sub',viewer::text,true);
+  denied:=false;begin perform public.unsite_workspace_command('accept_invitation',jsonb_build_object('invitation_id',first_inv->>'id','token',token));exception when raise_exception then denied:=true;end;assert denied,'accepted invitation cannot re-add a removed member';
+  perform set_config('request.jwt.claim.sub',owner_id::text,true);
+  inv:=public.unsite_workspace_command('create_invitation',jsonb_build_object('space_id',sid,'email',unconfirmed::text||'@example.invalid','role','editor','token',token,'request_id',gen_random_uuid()));
+  perform set_config('request.jwt.claim.sub',unconfirmed::text,true);
+  denied:=false;begin perform public.unsite_workspace_command('accept_invitation',jsonb_build_object('invitation_id',inv->>'id','token',token));exception when raise_exception then denied:=true;end;assert denied,'unconfirmed email cannot join';
+  perform set_config('request.jwt.claim.sub',owner_id::text,true);
+  perform public.unsite_workspace_command('revoke_invitation',jsonb_build_object('space_id',sid,'invitation_id',inv->>'id'));
+  reset role;
+  update auth.users set email_confirmed_at=now() where id=unconfirmed;
+  set local role authenticated;
+  perform set_config('request.jwt.claim.sub',unconfirmed::text,true);
+  denied:=false;begin perform public.unsite_workspace_command('accept_invitation',jsonb_build_object('invitation_id',inv->>'id','token',token));exception when raise_exception then denied:=true;end;assert denied,'revoked invitation cannot join';
+  perform set_config('request.jwt.claim.sub',owner_id::text,true);
+  inv:=public.unsite_workspace_command('create_invitation',jsonb_build_object('space_id',sid,'email',unconfirmed::text||'@example.invalid','role','viewer','token',token,'request_id',gen_random_uuid()));
+  reset role;
+  update public.unsite_invitations set expires_at=now()-interval '1 minute' where id=(inv->>'id')::uuid;
+  set local role authenticated;
+  perform set_config('request.jwt.claim.sub',unconfirmed::text,true);
+  denied:=false;begin perform public.unsite_workspace_command('accept_invitation',jsonb_build_object('invitation_id',inv->>'id','token',token));exception when raise_exception then denied:=SQLERRM='Invitation has expired';end;assert denied,'expired invitation cannot join';
+  perform set_config('request.jwt.claim.sub',owner_id::text,true);
+  denied:=false;begin perform public.unsite_workspace_command('leave_workspace',jsonb_build_object('space_id',sid));exception when raise_exception then denied:=true;end;assert denied,'owner cannot leave workspace without an owner';
+  reset role;
+end $$;
+rollback;
+select 'PASS: workspace roles, tenant isolation, hashed invitations, confirmed email, expiration, revocation, removal, restore, full directory search and owner export' as result;

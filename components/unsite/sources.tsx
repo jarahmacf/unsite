@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Archive, ArrowUpRight, ChevronDown, ChevronRight, FileText, Link2, Plus, RefreshCw, Search, ShieldCheck, Sparkles, UploadCloud, X } from "lucide-react";
+import { Archive, ArrowUpRight, ChevronDown, ChevronRight, FileText, Link2, Plus, RefreshCw, Search, ShieldCheck, Sparkles, UploadCloud, X } from "@/components/unsite/icons";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -107,7 +107,7 @@ export function AddSource({ spaceId, open, onClose, onSaved, existing, aiAvailab
     } finally { setBusy(false); setProgress(""); }
   }
 
-  return <Modal open={open} onClose={() => !busy && onClose()} title={existing ? "Add a new version" : "Add sources"} description={existing ? "Keep the latest context together with its history. Previous versions are preserved." : "Bring your documents, pages, and notes into one private workspace."}>
+  return <Modal open={open} dirty={files.length>0||title!==(existing?.title||"")||url!==(existing?.origin_url||"")||!!text||aiApproved} onClose={() => !busy && onClose()} title={existing ? "Add a new version" : "Add sources"} description={existing ? "Keep the latest context together with its history. Previous versions are preserved." : "Bring your documents, pages, and notes into one private workspace."}>
     <form onSubmit={submit}>
       <fieldset disabled={busy}>
         <Tabs value={tab} onValueChange={value => { if (!existing) { setTab(value as SourceKind); setError(""); } }}>
@@ -227,7 +227,7 @@ export function Sources({ state, command, reload, canEdit, aiAvailable = true, g
   }
   async function act(action: string, payload: Record<string, unknown>) {
     setBusy(action); setError("");
-    try { await command(action, payload); if (action === "archive_source") closeSource(); }
+    try { await command(action, payload); if (action === "archive_source" || action === "restore_source") closeSource(); }
     catch (caught) { setError((caught as Error).message); }
     finally { setBusy(""); }
   }
@@ -241,7 +241,8 @@ export function Sources({ state, command, reload, canEdit, aiAvailable = true, g
     </details>}
     {(adding || refresh) && <AddSource key={refresh?.id || "new"} spaceId={state.space.id} open onClose={() => { setAdding(false); setRefresh(undefined); }} onSaved={reload} existing={refresh} aiAvailable={aiAvailable} gateway={gateway} />}
     <Sheet open={!!selected} onOpenChange={open => { if (!open) closeSource(); }}>
-      <SheetContent className="us-dialog us-source-sheet" onCloseAutoFocus={event => { event.preventDefault(); if (!refresh) { if (returnFocus.current?.isConnected) returnFocus.current.focus(); else document.getElementById("workspace-content")?.focus(); } }}>
+      <SheetContent side="right" showCloseButton={false} className="us-dialog us-source-sheet" onCloseAutoFocus={event => { event.preventDefault(); if (!refresh) { if (returnFocus.current?.isConnected) returnFocus.current.focus(); else document.getElementById("workspace-content")?.focus(); } }}>
+        <button type="button" className="us-icon-button us-panel-close" aria-label="Close source details" onClick={closeSource}><X size={16}/></button>
         <SheetHeader><SheetTitle>{selected?.title || "Source details"}</SheetTitle><SheetDescription>Private source · original content and version history</SheetDescription></SheetHeader>
         {selected && <div className="us-source-sheet-body">
           <div className="us-source-meta"><Pill>{selected.kind === "url" ? "Web page" : selected.kind === "text" ? "Text note" : "Document"}</Pill><Pill>{versions.length} version{versions.length === 1 ? "" : "s"}</Pill>{selected.archived_at && <Pill>Archived</Pill>}{selected.origin_url && <External href={selected.origin_url}>Open page</External>}</div>
@@ -271,6 +272,7 @@ export function Sources({ state, command, reload, canEdit, aiAvailable = true, g
             })}</section>
           </div>
           <ErrorNotice message={error} />
+          {canEdit && selected.archived_at && <div className="us-source-sheet-actions"><Action secondary disabled={!!busy} onClick={() => void act("restore_source", {source_id:selected.id})}><Archive size={16}/>{busy==="restore_source"?"Restoring…":"Restore source"}</Action><span className="us-small us-muted">All original versions are retained.</span></div>}
           {canEdit && !selected.archived_at && <div className="us-source-sheet-actions"><Action secondary disabled={!!busy} onClick={() => { setRefresh(selected); closeSource(); }}><Plus size={16} />Add version</Action><button type="button" className="us-link" disabled={!!busy} onClick={() => void act("archive_source", { source_id: selected.id })}><Archive size={15} />{busy === "archive_source" ? "Archiving…" : "Archive source"}</button></div>}
         </div>}
       </SheetContent>

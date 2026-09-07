@@ -1,5 +1,5 @@
 "use client";
-import {Plus,Trash2} from "lucide-react";
+import {Plus,Trash2} from "@/components/unsite/icons";
 import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
 import {RELATIONS,KNOWLEDGE_STATES,FRAMINGS,relationLabels,statusLabels,framingLabels,type KnowledgeContext,type KnowledgeLink} from "@/lib/production/knowledge";

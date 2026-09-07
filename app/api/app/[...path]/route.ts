@@ -32,12 +32,13 @@ export async function GET(request:Request){
       result={storage:true,processing:Boolean(status?.worker),model:Boolean(status?.model),modelName:status?.modelName||null,publicBase:ctx.config.publicBase,domains:false};
     }else if(path==="state"){
       const spaceId=uuid.parse(url.searchParams.get("space"));
+      const candidateLimit=z.coerce.number().int().min(100).max(1000).parse(url.searchParams.get("candidate_limit")||100);
       const queries=await Promise.all([
         client.from("unsite_spaces").select("*").eq("id",spaceId).single(),
         client.from("unsite_sources").select("*").eq("space_id",spaceId).order("created_at",{ascending:false}),
         client.from("unsite_source_versions").select("id,source_id,space_id,version,storage_path,mime_type,byte_size,content_hash,created_at").eq("space_id",spaceId).order("version",{ascending:false}),
         client.from("unsite_jobs").select("id,space_id,source_version_id,status,stage,attempts,max_attempts,progress,error_code,error_message,run_after,created_at,updated_at").eq("space_id",spaceId).order("created_at",{ascending:false}),
-        client.from("unsite_candidates").select("*",{count:"exact"}).eq("space_id",spaceId).eq("status","proposed").eq("review_ready",true).order("created_at").range(0,99),
+        client.from("unsite_candidates").select("*",{count:"exact"}).eq("space_id",spaceId).eq("status","proposed").eq("review_ready",true).order("created_at").order("id").range(0,candidateLimit-1),
         client.from("unsite_records").select("*",{count:"exact"}).eq("space_id",spaceId).order("updated_at",{ascending:false}).range(0,199),
         client.from("unsite_releases").select("id,space_id,revision,source_revision,summary,created_by,published_at").eq("space_id",spaceId).order("revision",{ascending:false}).limit(100),
         client.from("unsite_events").select("*").eq("space_id",spaceId).order("created_at",{ascending:false}).limit(60),
@@ -48,6 +49,22 @@ export async function GET(request:Request){
       for(const q of queries)databaseError(q.error);
       const names=["space","sources","versions","jobs","candidates","records","releases","activity","memberships","aiAuthorizations"];
       result={...Object.fromEntries(names.map((name,i)=>[name,queries[i].data])),candidateCount:queries[4].count,recordCount:queries[5].count};
+    }else if(path==="workspace-settings"||path==="workspace-export"){
+      const space=uuid.parse(url.searchParams.get("space"));
+      const {data,error}=await client.rpc(path==="workspace-settings"?"unsite_workspace_settings":"unsite_workspace_export",{space_id:space});databaseError(error);
+      if(path==="workspace-export"){
+        const bytes=new TextEncoder().encode(JSON.stringify(data)),headers=new Headers(ctx.headers);let offset=0;
+        headers.set("Content-Type","application/json; charset=utf-8");
+        headers.set("Content-Disposition",`attachment; filename="unsite-workspace-${space}.json"`);
+        return new Response(new ReadableStream({pull(controller){if(offset>=bytes.length){controller.close();return;}controller.enqueue(bytes.slice(offset,offset+65536));offset+=65536;}}),{headers});
+      }
+      result=data;
+    }else if(path==="record-directory"){
+      const input=z.object({space_id:uuid,search_query:z.string().trim().max(300),content_type:z.string().trim().max(100),inclusion:z.enum(["all","included","excluded"]),page_offset:z.coerce.number().int().min(0).max(100000),page_limit:z.coerce.number().int().min(1).max(100)}).parse({space_id:url.searchParams.get("space"),search_query:url.searchParams.get("q")||"",content_type:url.searchParams.get("type")||"",inclusion:url.searchParams.get("inclusion")||"all",page_offset:url.searchParams.get("offset")||0,page_limit:url.searchParams.get("limit")||24});
+      const {data,error}=await client.rpc("unsite_record_directory",input);databaseError(error);result=data;
+    }else if(path==="activity"){
+      const space=uuid.parse(url.searchParams.get("space")),offset=z.coerce.number().int().min(0).max(100000).parse(url.searchParams.get("offset")||0);
+      const {data,error,count}=await client.from("unsite_events").select("*",{count:"exact"}).eq("space_id",space).order("created_at",{ascending:false}).order("id",{ascending:false}).range(offset,offset+49);databaseError(error);result={items:data,count};
     }else if(path==="collection-runs"){
       const space=uuid.parse(url.searchParams.get("space")),id=url.searchParams.get("id");
       const {data,error}=await client.rpc("unsite_collection_overview",{p_space_id:space,p_run_id:id?uuid.parse(id):null});
@@ -127,7 +144,7 @@ export async function POST(request:Request){
     const action=route(request);
     if(!(action in commandSchemas))throw new AppError(404,"This command does not exist.");
     const payload=commandSchemas[action as keyof typeof commandSchemas].parse(await readJson(request));
-    const rpc=["start_collection_run","cancel_collection_run","resume_collection_run"].includes(action)?"unsite_collection_command":["prepare_source","stop_preparation"].includes(action)?"unsite_ai_command":["save_retrieval_case","delete_retrieval_case"].includes(action)?"unsite_retrieval_case_command":"unsite_command";
+    const rpc=["restore_source","create_invitation","accept_invitation","revoke_invitation","update_member","remove_member","leave_workspace"].includes(action)?"unsite_workspace_command":["start_collection_run","cancel_collection_run","resume_collection_run"].includes(action)?"unsite_collection_command":["prepare_source","stop_preparation"].includes(action)?"unsite_ai_command":["save_retrieval_case","delete_retrieval_case"].includes(action)?"unsite_retrieval_case_command":"unsite_command";
     const {data,error}=await ctx.supabase.rpc(rpc,{action,payload});databaseError(error);
     let upload:unknown=null,uploadComplete=false;
     if(action==="source_intake"&&data.storage_path){

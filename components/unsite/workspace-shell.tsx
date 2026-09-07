@@ -3,8 +3,8 @@
 import { useRef, useState, type ReactNode } from "react";
 import {
   BookOpen, CheckCheck, ChevronRight, FileText, FlaskConical, Globe,
-  LayoutDashboard, LogOut, Menu, Plus, RefreshCw, Settings2, ShieldCheck,
-} from "lucide-react";
+  LayoutDashboard, LogOut, Menu, Plus, RefreshCw, Settings2, ShieldCheck, X,
+} from "@/components/unsite/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Choice, Pill } from "./shared";
 import type { Space } from "@/lib/production/types";
@@ -61,6 +61,7 @@ function Navigation({ spaces, spaceId, tab, email, candidateCount = 0, onTabChan
         <span><strong>{sample ? "Sample account" : "Your account"}</strong><small title={email}>{email}</small></span>
         <button type="button" aria-label={sample ? "Reset sample workspace" : "Sign out"} onClick={onSignOut}><LogOut size={17} /></button>
       </div>
+      <p className="us-icon-credit"><a href="https://www.streamlinehq.com/icons/plump-solid-free" target="_blank" rel="noreferrer">Icons by Streamline</a></p>
     </div>
   </>;
 }
@@ -79,8 +80,9 @@ export function WorkspaceShell(props: ShellProps) {
     <a className="us-skip-link" href="#workspace-content">Skip to content</a>
     <aside className="us-sidebar"><Navigation {...navigationProps} /></aside>
     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-      <SheetContent side="left" className="us-dialog us-mobile-sidebar" onCloseAutoFocus={event => { event.preventDefault(); menuButton.current?.focus(); }}>
+      <SheetContent side="right" showCloseButton={false} className="us-dialog us-mobile-sidebar" onCloseAutoFocus={event => { event.preventDefault(); menuButton.current?.focus(); }}>
         <SheetHeader className="sr-only"><SheetTitle>Workspace navigation</SheetTitle><SheetDescription>Choose a workspace or a section of Unsite.</SheetDescription></SheetHeader>
+        <button type="button" className="us-icon-button us-panel-close" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}><X size={16}/></button>
         <Navigation {...navigationProps} />
       </SheetContent>
     </Sheet>
