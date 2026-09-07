@@ -1,18 +1,22 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "../vendor/shadcn-tailwind-4.13.0.css";
+@font-face{font-family:"Outfit";font-style:normal;font-weight:100 900;font-display:swap;src:url("/fonts/outfit-latin.woff2") format("woff2")}
+@font-face{font-family:"Geist";font-style:normal;font-weight:100 900;font-display:swap;src:url("/fonts/geist-latin.woff2") format("woff2")}
+@font-face{font-family:"Geist Mono";font-style:normal;font-weight:100 900;font-display:swap;src:url("/fonts/geist-mono-latin.woff2") format("woff2")}
 :root{
---background:#f6f8fb;--foreground:#17252b;--card:#fff;--card-foreground:#17252b;--popover:#fff;--popover-foreground:#17252b;
---primary:#08665b;--primary-foreground:#fff;--secondary:#e8f1ee;--secondary-foreground:#134d44;--muted:#edf1f4;--muted-foreground:#5c6c76;
---accent:#e7f3ed;--accent-foreground:#114c43;--destructive:#bc3434;--border:#dce3e7;--input:#cbd6dc;--ring:#338c7e;--radius:.6rem;
---sidebar:#112d2b;--sidebar-foreground:#f1f8f4;--sidebar-primary:#c1f17b;--sidebar-primary-foreground:#123128;--sidebar-accent:#1a413b;--sidebar-accent-foreground:#f1f8f4;--sidebar-border:#31524c;--sidebar-ring:#b9e774;
+--background:#fafafa;--foreground:#171717;--card:#fff;--card-foreground:#171717;--popover:#fff;--popover-foreground:#171717;
+--primary:#262626;--primary-foreground:#fff;--secondary:#fafafa;--secondary-foreground:#404040;--muted:#f5f5f5;--muted-foreground:#737373;
+--accent:#f5f5f5;--accent-foreground:#262626;--destructive:#b42318;--border:#e5e5e5;--input:#d4d4d4;--ring:#175cd3;--radius:.5rem;
+--sidebar:#fff;--sidebar-foreground:#525252;--sidebar-primary:#262626;--sidebar-primary-foreground:#fff;--sidebar-accent:#f5f5f5;--sidebar-accent-foreground:#171717;--sidebar-border:#e5e5e5;--sidebar-ring:#175cd3;
+--font-heading:"Outfit","Geist","Segoe UI",sans-serif;
 }
 @theme inline{
 --color-background:var(--background);--color-foreground:var(--foreground);--color-card:var(--card);--color-card-foreground:var(--card-foreground);--color-popover:var(--popover);--color-popover-foreground:var(--popover-foreground);
 --color-primary:var(--primary);--color-primary-foreground:var(--primary-foreground);--color-secondary:var(--secondary);--color-secondary-foreground:var(--secondary-foreground);--color-muted:var(--muted);--color-muted-foreground:var(--muted-foreground);
 --color-accent:var(--accent);--color-accent-foreground:var(--accent-foreground);--color-destructive:var(--destructive);--color-border:var(--border);--color-input:var(--input);--color-ring:var(--ring);
 --radius-sm:calc(var(--radius) - 4px);--radius-md:calc(var(--radius) - 2px);--radius-lg:var(--radius);--radius-xl:calc(var(--radius) + 4px);
---font-sans:"Inter","Segoe UI",Arial,sans-serif;--font-mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+--font-sans:"Geist","Segoe UI",Arial,sans-serif;--font-mono:"Geist Mono","SFMono-Regular",Consolas,monospace;
 }
 *{box-sizing:border-box}body{margin:0;background:var(--background);color:var(--foreground);font-family:var(--font-sans);font-size:16px}
 button,a,input,textarea{-webkit-tap-highlight-color:transparent}button:not(:disabled),a{cursor:pointer}button:disabled{cursor:wait}::selection{background:#c6e9c9;color:#17252b}

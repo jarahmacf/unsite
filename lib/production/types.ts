@@ -17,4 +17,4 @@ export type Release = { id:string; space_id:string; revision:number; source_revi
 export type Activity = { id:string; space_id:string; action:string; actor_id:string|null; details:Record<string,unknown>; created_at:string };
 export type AiAuthorization = {id:string;space_id:string;source_version_id:string;provider:"openai";authorized_by:string;authorized_at:string;revoked_at:string|null;disclosure_version:string};
 export type SpaceState = { space:Space; sources:Source[]; versions:SourceVersion[]; jobs:Job[]; candidates:Candidate[]; records:KnowledgeRecord[]; releases:Omit<Release,"data">[]; activity:Activity[]; memberships:{user_id:string;role:Role}[];candidateCount:number;recordCount:number;aiAuthorizations:AiAuthorization[] };
-export type RuntimeStatus = { storage:boolean; processing:boolean; model:boolean; modelName:string|null; publicBase:string; domains:boolean };
+export type RuntimeStatus = { storage:boolean; processing:boolean; model:boolean; embeddings?:boolean; modelName:string|null; publicBase:string; publicOrigin?:string; domains:boolean };

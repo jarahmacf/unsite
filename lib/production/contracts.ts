@@ -1,4 +1,5 @@
 import { z } from "zod";
+import {presenceCommands} from "./presence";
 import {COLLECTION_DISCLOSURE_VERSION} from "./collection";
 import {AI_DISCLOSURE_VERSION} from "./ai-consent";
 import {RELATIONS,KNOWLEDGE_STATES,FRAMINGS,validContext} from "./knowledge";
@@ -14,6 +15,14 @@ export const sourceInput=z.object({space_id:uuid,title:name,kind:z.enum(["file",
   if(v.kind==="file"&&!['text/plain','text/markdown','application/json','application/pdf'].includes(v.mime_type))c.addIssue({code:"custom",message:"Use a PDF, text, Markdown, or JSON file."});
 });
 export const commandSchemas={
+  ...presenceCommands,
+  restore_source:z.object({space_id:uuid,source_id:uuid}),
+  create_invitation:z.object({space_id:uuid,email:z.string().trim().email().max(254),role:z.enum(["editor","viewer"]),token:z.string().regex(/^[0-9a-f]{64}$/),request_id:uuid}),
+  accept_invitation:z.object({invitation_id:uuid,token:z.string().regex(/^[0-9a-f]{64}$/)}),
+  revoke_invitation:z.object({space_id:uuid,invitation_id:uuid}),
+  update_member:z.object({space_id:uuid,user_id:uuid,role:z.enum(["editor","viewer"])}),
+  remove_member:z.object({space_id:uuid,user_id:uuid}),
+  leave_workspace:z.object({space_id:uuid}),
   start_collection_run:z.object({space_id:uuid,goal:z.string().trim().min(1).max(1500),version_ids:z.array(uuid).min(1).max(8).refine(v=>new Set(v).size===v.length,"Select each version once"),max_requests:z.number().int().min(1).max(200),approved:z.literal(true),disclosure_version:z.literal(COLLECTION_DISCLOSURE_VERSION),request_id:uuid}),
   cancel_collection_run:z.object({space_id:uuid,run_id:uuid}),
   resume_collection_run:z.object({space_id:uuid,run_id:uuid,max_requests:z.number().int().min(1).max(200),retry_reviewed:z.literal(true)}),

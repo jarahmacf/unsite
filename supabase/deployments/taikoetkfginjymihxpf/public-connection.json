@@ -1,0 +1,6 @@
+{
+  "url": "https://taikoetkfginjymihxpf.supabase.co",
+  "publishableKey": "sb_publishable_M1WFH4TeJ-vV7T8D8T9CFw_NWQ7mxmM",
+  "publicOrigin": "https://unsite.vercel.app",
+  "note": "Public connection settings only. Sessions, row-level security, and guarded commands protect customer data. Environment variables override these deployment defaults."
+}

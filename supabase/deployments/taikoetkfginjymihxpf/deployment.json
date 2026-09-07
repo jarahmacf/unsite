@@ -1,0 +1,92 @@
+{
+  "project_id": "taikoetkfginjymihxpf",
+  "name": "Unsite",
+  "organization_id": "dikgwohjqigogutqozol",
+  "organization_name": "Macfarlane Sandbox",
+  "region": "us-west-1",
+  "project_url": "https://taikoetkfginjymihxpf.supabase.co",
+  "schema_migrations": [
+    {
+      "version": "20260905223442",
+      "name": "unsite_initial_schema",
+      "file": "migrations/20260905223442_unsite_initial_schema.sql",
+      "sha256": "5ef4ff8449eecb38963e18a19faea809e9a42b3d5151eb82519446f831c959e0"
+    },
+    {
+      "version": "20260905223726",
+      "name": "unsite_collection_coverage_aliases",
+      "file": "migrations/20260905223726_unsite_collection_coverage_aliases.sql",
+      "sha256": "e121a2244f8487e12312e6d7d9c1dd96a71f636b22052243e290a00f9816562b"
+    },
+    {
+      "version": "20260905223951",
+      "name": "unsite_worker_schedule",
+      "file": "migrations/20260905223951_unsite_worker_schedule.sql",
+      "sha256": "4cbbabd85595c0a15eaace034e86e6decfe255f44976c61d1d90f2fb9e6151c6"
+    },
+    {
+      "version": "20260907034412",
+      "name": "unsite_workspace_controls",
+      "file": "migrations/20260907034412_unsite_workspace_controls.sql",
+      "sha256": "b4fe4c3ca5b626f95d5dd0ce247b45b23d5daea7b60f4336c08e812b77dccdc2"
+    },
+    {
+      "version": "20260907050315",
+      "name": "geo_delivery_foundation",
+      "file": "migrations/20260907050315_geo_delivery_foundation.sql",
+      "sha256": "945073f846c9ba59a9051209da2c4bdd627b7608c4c68cc3fed638cf2a662849"
+    },
+    {
+      "version": "20260907052051",
+      "name": "geo_discovery_and_provenance",
+      "file": "migrations/20260907052051_geo_discovery_and_provenance.sql",
+      "sha256": "e6e3ef722b817d3bf398bba710c5fb44f0accec2679740468319be5bac0d042e"
+    },
+    {
+      "version": "20260907052713",
+      "name": "geo_delivery_checks",
+      "file": "migrations/20260907052713_geo_delivery_checks.sql",
+      "sha256": "4ecb76bddccfe3852827fafadaf1dfefbf84cfd44240c2a880fc639fce0f2b5d"
+    },
+    {
+      "version": "20260907053430",
+      "name": "geo_release_regressions",
+      "file": "migrations/20260907053430_geo_release_regressions.sql",
+      "sha256": "8742479227b40b54d050e0195af10579377627510c08bfe823757833973d60cb"
+    },
+    {
+      "version": "20260907121910",
+      "name": "geo_semantic_retrieval",
+      "file": "migrations/20260907121910_geo_semantic_retrieval.sql",
+      "sha256": "a17458b739886765e42dfa1c85bd2d580ad1e016ee38bfc887f5997917f88bde"
+    },
+    {
+      "version": "20260907121941",
+      "name": "geo_launch_services",
+      "file": "migrations/20260907121941_geo_launch_services.sql",
+      "sha256": "24f95633232d16ee9aa2c53da288db83f8f12547fe41577c488d116d08c0539c"
+    }
+  ],
+  "original_project_unchanged": "xwqjunvwimkqtumhbyre",
+  "bootstrap_source_commit": "9d5fae39eaf65a640a45acdb5d9c782243e573ed",
+  "notes": [
+    "These versions were returned by the target migration service. Historical source-project versions were not replayed as migration-history entries.",
+    "The initial-bootstrap-source-manifest records the exact originally applied bootstrap; the coverage correction was applied separately.",
+    "No source-project credentials or customer data were copied."
+  ],
+  "applied": true,
+  "edge_functions": [
+    {
+      "name": "unsite",
+      "version": 3,
+      "verify_jwt": false,
+      "sha256": "5c215d8ee90645481605dddb59a7dde4ad6f4cd6a4486f77b692136ad2a8f796"
+    },
+    {
+      "name": "unsite-worker",
+      "version": 3,
+      "verify_jwt": true,
+      "sha256": "d4df3acd5cd30dfecef080387b9e08be50e76d193fc803bb199aafc1a167fa4e"
+    }
+  ]
+}
