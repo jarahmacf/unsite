@@ -8,6 +8,14 @@ const { build } = createRequire(root + "/package.json")("esbuild");
 const compiled = await build({ stdin: { contents: `export * from ${JSON.stringify(root + "/app/demo/fixtures.ts")}; export * from ${JSON.stringify(root + "/components/unsite/source-state.ts")}; export * from ${JSON.stringify(root + "/app/demo/workspace-gateway.ts")};`, loader: "ts", resolveDir: root }, bundle: true, format: "esm", platform: "node", write: false, tsconfig: root + "/tsconfig.json", logLevel: "silent" });
 const { sampleState, sampleGateway, latestVersion, sourceStatus, workspaceGateway } = await import("data:text/javascript;base64," + Buffer.from(compiled.outputFiles[0].text).toString("base64"));
 
+test("sample visibility validates publisher links before rendering or releasing them",async()=>{
+  let state=sampleState(true);const gateway=workspaceGateway(()=>state,next=>state=next);
+  const payload={revision:0,entity_type:"Organization",official_url:"https://example.com/",aliases:[],profile_urls:["not a URL"]};
+  await assert.rejects(gateway.request("/api/app/save_publisher",payload),/HTTPS URL/);
+  await gateway.request("/api/app/save_publisher",{...payload,profile_urls:["https://example.com/profile"]});
+  const result=await gateway.request("/api/app/presence");assert.deepEqual(result.publisher.profile_urls,["https://example.com/profile"]);
+});
+
 test("sample source workflow preserves versions and never falls back to a live service", async () => {
   let state = sampleState(true);
   const gateway = sampleGateway(() => state, next => { state = next; });

@@ -83,7 +83,7 @@ Build against the existing workspace, Supabase API, immutable publications, and 
 - [x] H2 Document and validate frontend/backend compatibility and deployment order.
 - [x] H3 Add regression tests for tenant isolation, ownership proof, version fencing, refresh idempotency and public projection.
 - [x] H4 Validate TypeScript, the existing builds, API contracts and database behavior.
-- [ ] H5 Save source and publish the authorized application preview and backend updates.
+- [x] H5 Save source and publish the authorized application preview and backend updates.
 - [ ] H6 Complete external setup: provider credentials, Vercel runtime configuration, official domain proof and custom-domain hosting where selected.
 - [ ] H7 Run a small explicitly approved real-content preparation and publication walkthrough.
 - [ ] H8 Run external-agent discovery/citation trials and record the baseline; ranking improvements require observations over time.
@@ -99,7 +99,7 @@ An external consumer can discover the canonical publication, identify its publis
 - [OpenAI MCP documentation](https://developers.openai.com/api/docs/mcp): a connected tool interface is distinct from ordinary web discovery.
 - [Bing AI Performance](https://blogs.bing.com/webmaster/February-2026/Introducing-AI-Performance-in-Bing-Webmaster-Tools-Public-Preview): citation visibility is measurable but is not a universal ranking position.
 
-Implementation checked above is covered by the TypeScript/build gates, targeted API tests or database regression checks. Current validation: 55 canonical tests plus the additional DNS-scoping test; the generated Next.js app builds successfully and its production test selection passes. Four GEO migrations are applied to the target project; both Edge Functions are ACTIVE at version 2. UI deployment verification is in progress.
+Implementation checked above is covered by the TypeScript/build gates, targeted API tests or database regression checks. Current validation: 57 canonical tests; the generated Next.js app builds successfully and its production test selection passes. Four GEO migrations are applied to the target project; both Edge Functions are ACTIVE at version 2. The GEO preview deployment is READY. Its account endpoint, public directory, sitemap, robots file and demo return HTTP 200; the directory correctly shows no publications yet. Runtime and browser interaction checks with a real customer account/content remain part of launch validation.
 
 Remaining implementation: optional semantic indexing (D6), per-tenant custom hosts (B8), a broader readiness/resource-uptime system (G4), and ownership-dependent search-console/IndexNow activation (G8). These are not represented as completed features. Source monitoring and HTTP/MCP checks do not establish external AI citation performance.
 

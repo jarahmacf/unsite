@@ -1,11 +1,12 @@
 import type { Candidate, KnowledgeFields, KnowledgeRecord, Release, SpaceState } from "@/lib/production/types";
+import type {AnyZodObject} from "zod";
 import { contextOf, type KnowledgeContext, type KnowledgeLink } from "@/lib/production/knowledge";
 import { inspectKnowledge, runRetrievalCases, type RetrievalCase } from "@/lib/production/retrieval";
 import type { Snapshot } from "@/lib/production/release";
 import type { SourceGateway } from "@/components/unsite/source-gateway";
 import { sampleGateway, sampleState } from "./fixtures";
 import {filterDirectory,type WorkspaceInvitation,type WorkspaceMember} from "@/lib/production/workspace";
-import {emptyPublisher,presenceActions,type PresenceState,type Publisher,type PublicResource,type VisibilityObservation} from "@/lib/production/presence";
+import {emptyPublisher,presenceActions,presenceCommands,type PresenceState,type Publisher,type PublicResource,type VisibilityObservation} from "@/lib/production/presence";
 
 export function demoSnapshot(state: SpaceState, links = new Map<string, KnowledgeLink[]>(),presence?:PresenceState): Snapshot {
   return { schema_version: "2.1", id: state.space.id, name: state.space.name, kind: state.space.kind, description: state.space.description, contact_email: state.space.contact_email,
@@ -50,6 +51,15 @@ export function workspaceGateway(getState: () => SpaceState, update: (next: Spac
       result=structuredClone(presence);
     }else if(presenceActions.includes(route.split("/").pop()||"")){
       const action=route.split("/").pop()!,now=new Date().toISOString();
+      if(action==="save_monitor"||action==="check_source"){
+        if(!state.sources.some(s=>s.id===payload.source_id&&s.kind==="url"&&!s.archived_at))throw new Error("Choose an active web-page source.");
+        if(action==="save_monitor")presenceCommands.save_monitor.shape.cadence.parse(payload.cadence);
+      }else{
+        const schema=(presenceCommands[action as keyof typeof presenceCommands] as AnyZodObject).omit({space_id:true});
+        const validation=schema.safeParse(payload);
+        if(!validation.success)throw new Error(validation.error.issues.slice(0,2).map(i=>i.message).join(" "));
+        Object.assign(payload,validation.data);
+      }
       if(action==="save_publisher")presence.publisher={...payload,revision:presence.publisher.revision+1} as Publisher;
       else if(action==="save_resource"){const old=presence.resources.find(r=>r.id===payload.id);presence.resources=[...presence.resources.filter(r=>r.id!==payload.id),{...payload,revision:(old?.revision||0)+1} as PublicResource];}
       else if(action==="claim_domain"){
