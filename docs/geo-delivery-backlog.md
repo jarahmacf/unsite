@@ -23,7 +23,7 @@ Build against the existing workspace, Supabase API, immutable publications, and 
 - [x] B5 Supply an official-site linking snippet and an operator-configured canonical application origin.
 - [x] B6 Document separate search and training crawler controls; do not claim llms.txt guarantees discovery.
 - [x] B7 Make unpublish, rollback, source changes and verification revocation consistent across every representation.
-- [ ] B8 Implement per-tenant custom-host routing after the customer selects the intended hostname and hosting arrangement. DNS/TLS activation also requires that external setup.
+- [x] B8 Implement exact-host tenant routing, canonical URLs, isolated public HTTP/MCP routes, hostname-specific robots/sitemaps and HTTPS connection checks. Actual DNS/TLS activation remains customer/operator setup (H6).
 
 ## C. Useful public resources and API
 
@@ -42,7 +42,7 @@ Build against the existing workspace, Supabase API, immutable publications, and 
 - [x] D3 Retain full text, structured fields, framing, attribution, dates and linked records in retrieval results.
 - [x] D4 Route update comparisons using provenance and content, not only titles/aliases/topics.
 - [x] D5 Remove the arbitrary four-comparison blind spot while bounding task inputs.
-- [ ] D6 Add optional semantic indexing/query support with truthful availability and provider consent; validate with real models when configured.
+- [x] D6 Add optional pgvector indexing and hybrid HTTP/MCP retrieval with per-release OpenAI authorization, explicit query consent, daily query limits and truthful availability. Real-provider evaluation remains H7/H8.
 - [x] D7 Add regression cases for paraphrases, numbers, conflicting versions, absent answers and renamed entities.
 
 ## E. Recurring monitoring and incremental updates
@@ -71,11 +71,11 @@ Build against the existing workspace, Supabase API, immutable publications, and 
 - [x] G1 Add a visibility workspace with explicit query/platform/date observations and cited URLs.
 - [x] G2 Measure citation inclusion, preferred-source use, answer correctness and stale-answer incidence separately.
 - [x] G3 Separate observed external citations from internal tests and inferred crawler traffic.
-- [ ] G4 Add readiness checks for identity, discovery, resource integrity, retrieval and freshness; never label a readiness score as search rank.
+- [x] G4 Add readiness checks for identity, delivery, resource availability/format, retrieval, discovery and source freshness. Daily resource checks inspect approved URLs with bounded requests and public-network/crawl guards; no ranking score is shown.
 - [x] G5 Record and surface failed monitoring, processing and public-delivery checks.
 - [x] G6 Provide a repeatable benchmark for web-search discovery, direct HTTP and connected MCP clients.
 - [x] G7 Support exports of observations, delivery results and owner workspace evidence for comparison over time.
-- [ ] G8 Document search-console/IndexNow integration and activate only for a domain the customer controls.
+- [x] G8 Build Google/Bing verification-token controls and consented IndexNow notifications for additions, updates and removals, restricted to a verified, connected hostname. Account verification and activation remain H6.
 
 ## H. Delivery, validation and launch
 
@@ -99,8 +99,8 @@ An external consumer can discover the canonical publication, identify its publis
 - [OpenAI MCP documentation](https://developers.openai.com/api/docs/mcp): a connected tool interface is distinct from ordinary web discovery.
 - [Bing AI Performance](https://blogs.bing.com/webmaster/February-2026/Introducing-AI-Performance-in-Bing-Webmaster-Tools-Public-Preview): citation visibility is measurable but is not a universal ranking position.
 
-Implementation checked above is covered by the TypeScript/build gates, targeted API tests or database regression checks. Current validation: 57 canonical tests; the generated Next.js app builds successfully and its production test selection passes. Four GEO migrations are applied to the target project; both Edge Functions are ACTIVE at version 2. The GEO preview deployment is READY. Its account endpoint, public directory, sitemap, robots file and demo return HTTP 200; the directory correctly shows no publications yet. Runtime and browser interaction checks with a real customer account/content remain part of launch validation.
+Implementation checked above is covered by TypeScript/build gates, targeted API tests and database regression checks. Current validation: 68 canonical tests and 66 generated-production tests pass; both application builds pass. Six GEO migrations are applied to the target project, including the two launch-service migrations, and both Edge Functions are ACTIVE at version 3. The generated Next.js app is delivered through the existing GitHub preview branch and draft PR. Runtime and browser interaction checks with a real customer account/content remain part of launch validation.
 
-Remaining implementation: optional semantic indexing (D6), per-tenant custom hosts (B8), a broader readiness/resource-uptime system (G4), and ownership-dependent search-console/IndexNow activation (G8). These are not represented as completed features. Source monitoring and HTTP/MCP checks do not establish external AI citation performance.
+The second implementation pass completes D6, B8, G4 and G8. Remaining launch tasks are H6–H8: account/provider/domain setup, a real-content walkthrough and external citation trials. Resource checks report individual availability observations, not a historical uptime SLA. Semantic relevance and similarity thresholds still need evaluation against real content and models.
 
  Account-owned configuration, actual DNS proof and external ranking observations cannot be fabricated as completed implementation.

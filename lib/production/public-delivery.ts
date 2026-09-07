@@ -5,7 +5,7 @@ import type {Authority} from "./presence";
 import type {PublishedRecord,Snapshot} from "./release";
 
 export const publicId=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-export type PublicProfile=Omit<Snapshot,"records">&{release_id:string;published_at:string;authority:Authority|null;canonical_url:string};
+export type PublicProfile=Omit<Snapshot,"records">&{release_id:string;published_at:string;authority:Authority|null;canonical_url:string;discovery?:{google_token?:string;bing_token?:string}|null};
 export type DirectoryEntry={id:string;name:string;description:string;release_id:string;published_at:string};
 export async function publicRead<T>(path:string):Promise<T>{
   const response=await fetch(publicRuntime().base+path,{cache:"no-store",signal:AbortSignal.timeout(20000),headers:{Accept:"application/json"}});

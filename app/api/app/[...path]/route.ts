@@ -33,7 +33,7 @@ export async function GET(request:Request){
       const {data,error}=await client.from("unsite_spaces").select("*").order("created_at");databaseError(error);result={spaces:data};
     }else if(path==="status"){
       const status=await worker(ctx);
-      result={storage:true,processing:Boolean(status?.worker),model:Boolean(status?.model),modelName:status?.modelName||null,publicBase:ctx.config.publicBase,publicOrigin:ctx.config.publicOrigin,domains:false};
+      result={storage:true,processing:Boolean(status?.worker),model:Boolean(status?.model),embeddings:Boolean(status?.embeddings),modelName:status?.modelName||null,publicBase:ctx.config.publicBase,publicOrigin:ctx.config.publicOrigin,domains:true};
     }else if(path==="state"){
       const spaceId=uuid.parse(url.searchParams.get("space"));
       const candidateLimit=z.coerce.number().int().min(100).max(1000).parse(url.searchParams.get("candidate_limit")||100);
@@ -160,7 +160,7 @@ export async function POST(request:Request){
       }else databaseError(completed.error);
     }
     // Await only the worker's acknowledgement. Long work runs on its durable queue.
-    if(["source_intake","complete_upload","retry_job","prepare_source","start_collection_run","resume_collection_run","claim_domain","check_domain","save_monitor","check_source","check_delivery"].includes(action)&&(!data.storage_path||uploadComplete))await worker(ctx,"POST");
+    if(["source_intake","complete_upload","retry_job","prepare_source","start_collection_run","resume_collection_run","claim_domain","check_domain","save_monitor","check_source","check_delivery","index_release","register_host","check_host","check_resources","save_discovery","submit_discovery"].includes(action)&&(!data.storage_path||uploadComplete))await worker(ctx,"POST");
     return Response.json({result:data,upload,uploadComplete},{headers:ctx.headers});
   }catch(e){return apiError(e,ctx?.headers);}
 }

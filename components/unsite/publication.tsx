@@ -6,7 +6,7 @@ import {contextOf,entryType,framingLabels,relationLabels,statusLabels} from "@/l
 
 export function PublicationFrame({profile,base,children}:{profile:PublicProfile;base:string;children:ReactNode}){
   const verified=profile.authority?.status==="verified"&&!!profile.authority.expires_at&&Date.parse(profile.authority.expires_at)>Date.now();
-  return <div className="unsite-public"><header className="up-header"><Link href="/directory" className="up-brand">unsite.</Link><nav aria-label="Publication resources"><a href={base+"/index.md"}>Markdown</a><a href={base+"/openapi.json"}>API</a><a href={base+"/mcp"}>MCP</a></nav></header>
+  return <div className="unsite-public"><header className="up-header"><Link href={profile.canonical_url} className="up-brand">unsite.</Link><nav aria-label="Publication resources"><a href={base+"/index.md"}>Markdown</a><a href={base+"/openapi.json"}>API</a><a href={base+"/mcp"}>MCP</a></nav></header>
     <main className="up-main">{children}</main>
     <footer className="up-footer"><strong>Published by {profile.name}</strong><p>Release {profile.release_id} · Published <time dateTime={profile.published_at}>{new Date(profile.published_at).toISOString().slice(0,10)}</time></p>
       <p>{verified?`Control of ${profile.authority!.domain} was verified by DNS. This confirms domain control; it is not independent verification of every claim.`:"This publication is owner approved. Its official domain has not been verified."} <a href={base+"/authority"}>View verification</a></p>

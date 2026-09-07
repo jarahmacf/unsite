@@ -60,7 +60,9 @@ export function workspaceGateway(getState: () => SpaceState, update: (next: Spac
         if(!validation.success)throw new Error(validation.error.issues.slice(0,2).map(i=>i.message).join(" "));
         Object.assign(payload,validation.data);
       }
-      if(action==="save_publisher")presence.publisher={...payload,revision:presence.publisher.revision+1} as Publisher;
+      if(action==="save_semantic")presence.semantic={settings:{enabled:Boolean(payload.enabled),daily_query_limit:Number(payload.daily_query_limit),revision:(presence.semantic?.settings.revision||0)+1,query_requests:0},indexes:[]};
+      else if(["index_release","register_host","check_host","save_discovery","submit_discovery","check_resources","check_delivery"].includes(action))throw new Error("This action requires a connected workspace. The sample does not contact external services.");
+      else if(action==="save_publisher")presence.publisher={...payload,revision:presence.publisher.revision+1} as Publisher;
       else if(action==="save_resource"){const old=presence.resources.find(r=>r.id===payload.id);presence.resources=[...presence.resources.filter(r=>r.id!==payload.id),{...payload,revision:(old?.revision||0)+1} as PublicResource];}
       else if(action==="claim_domain"){
         const domain=String(payload.domain).replace(/^https:\/\//,"").replace(/\/$/,"");

@@ -5,6 +5,7 @@
     "supabase",
     "tests",
     "scripts/check-publication.mjs",
+    "proxy.ts",
     "app/page.tsx",
     "app/error.tsx",
     "app/not-found.tsx",
@@ -37,7 +38,7 @@
     "package.json",
     "package-lock.json"
   ],
-  "runtime_adapter_sha256": "98a1317970ecc11802e3fa4e18748d3dda50eafbedf423c35f7774c5d6b1a22f",
+  "runtime_adapter_sha256": "2582123c137d1641293b5cd5d41777a80859ffc3cd1dfe13c5e20dc2a7825623",
   "database_schema": "Target migration history includes GEO identity, indexed delivery, monitoring and release checks; see docs/geo-launch.md",
   "environment_keys": [
     "UNSITE_SUPABASE_URL",

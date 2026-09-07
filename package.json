@@ -10,7 +10,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/production.test.mjs tests/collection-coordination.test.mjs tests/linked-knowledge.test.mjs tests/geo-delivery.test.mjs tests/source-preview.test.mjs tests/universal-knowledge.test.mjs"
+    "test": "node --test tests/production.test.mjs tests/collection-coordination.test.mjs tests/linked-knowledge.test.mjs tests/geo-delivery.test.mjs tests/geo-launch.test.mjs tests/source-preview.test.mjs tests/universal-knowledge.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

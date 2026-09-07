@@ -1,6 +1,8 @@
 import type {Metadata} from "next";
 import Link from "next/link";
-import {getPublicProfile,getPublicRecords,publicAddress,safeJsonLd} from "@/lib/production/public-delivery";
+import {headers} from "next/headers";
+import {normalizedHost} from "@/lib/production/host-routing";
+import {getPublicProfile,getPublicRecords,safeJsonLd} from "@/lib/production/public-delivery";
 import {publicRuntime} from "@/lib/production/supabase";
 import {entityMetadata} from "@/lib/production/presence";
 import {contextOf,entryType} from "@/lib/production/knowledge";
@@ -10,14 +12,15 @@ import "../../publication.css";
 export const dynamic="force-dynamic";
 type Props={params:Promise<{id:string}>;searchParams:Promise<{page?:string}>};
 export async function generateMetadata({params}:Props):Promise<Metadata>{
-  const {id}=await params,p=await getPublicProfile(id),url=publicAddress(id);
-  return {title:p.name+" | Unsite",description:p.description,alternates:{canonical:url},robots:{index:true,follow:true},openGraph:{title:p.name,description:p.description,url,type:"website"}};
+  const {id}=await params,p=await getPublicProfile(id),url=p.canonical_url;
+  const ownHost=normalizedHost((await headers()).get("host")||"")===new URL(url).hostname;
+  return {title:p.name+" | Unsite",description:p.description,alternates:{canonical:url},robots:{index:true,follow:true},verification:ownHost?{google:p.discovery?.google_token||undefined,other:p.discovery?.bing_token?{"msvalidate.01":p.discovery.bing_token}:undefined}:undefined,openGraph:{title:p.name,description:p.description,url,type:"website"}};
 }
 export default async function PublicPage({params,searchParams}:Props){
   const {id}=await params,p=await getPublicProfile(id),query=await searchParams;
   const page=Math.max(1,Math.min(100,Number.isInteger(Number(query.page))?Number(query.page):1));
-  const data=await getPublicRecords(id,p.release_id,(page-1)*100),path="/p/"+id,base=publicRuntime().base+"/v2/"+id;
-  const metadata=entityMetadata({...p,records:[]},publicAddress(id));
+  const data=await getPublicRecords(id,p.release_id,(page-1)*100),path=p.canonical_url,base=publicRuntime().base+"/v2/"+id;
+  const metadata=entityMetadata({...p,records:[]},p.canonical_url);
   return <PublicationFrame profile={p} base={base}><script type="application/ld+json" dangerouslySetInnerHTML={{__html:safeJsonLd(metadata)}}/>
     <div className="up-eyebrow">Publisher-approved knowledge</div><h1>{p.name}</h1><p className="up-lead">{p.description}</p>
     {p.publisher?.official_url&&<p><a href={p.publisher.official_url} rel="me nofollow noopener noreferrer">Official website</a></p>}

@@ -9,6 +9,8 @@ import {prepareAuthorizedJob} from "./processing.ts";
 import {checkDelivery} from "../../../lib/production/delivery-check.ts";
 import {runCollectionStep} from "./collection.ts";
 import {runMaintenanceStep} from "./maintenance.ts";
+import {runEmbeddingStep} from "./semantic.ts";
+import {runLaunchStep} from "./launch.ts";
 declare const Deno:{env:{get(name:string):string|undefined};resolveDns(host:string,type:"A"|"AAAA"):Promise<string[]>;resolveDns(host:string,type:"TXT"):Promise<string[][]>;serve(handler:(r:Request)=>Promise<Response>):void};
 declare const EdgeRuntime:{waitUntil(promise:Promise<unknown>):void};
 const modern=JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")||"{}");
@@ -57,8 +59,8 @@ async function runSource(){
 async function run(){
   // Separate lanes prevent a busy collection from starving source parsing or
   // maintenance. A bounded drain advances checkpoints without an open browser.
-  const results=await Promise.allSettled([runMaintenanceStep(rest,crawlDeps),runSource(),(async()=>{const start=Date.now();for(let i=0;i<3&&Date.now()-start<100000;i++)if(!await runCollectionStep(rest,modelConfig()))break;})()]);
-  results.forEach((result,i)=>{if(result.status==="rejected")console.error("Unsite "+["maintenance","source reading","collection preparation"][i]+" stopped; its lease will expire for recovery");});
+  const results=await Promise.allSettled([runMaintenanceStep(rest,crawlDeps),runSource(),(async()=>{const start=Date.now();for(let i=0;i<3&&Date.now()-start<100000;i++)if(!await runCollectionStep(rest,modelConfig()))break;})(),runEmbeddingStep(rest,modelConfig().key),(async()=>{for(let i=0;i<2;i++)if(!await runLaunchStep(rest,crawlDeps))break;})()]);
+  results.forEach((result,i)=>{if(result.status==="rejected")console.error("Unsite "+["maintenance","source reading","collection preparation","semantic indexing","launch checks"][i]+" stopped; review its next queue status");});
 }
 Deno.serve(async request=>{
   const headers={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"};
@@ -68,7 +70,7 @@ Deno.serve(async request=>{
     if(!/^[a-f0-9]{64}$/.test(token))return Response.json({error:"Authentication required"},{status:401,headers});
     const credentials=await rest("unsite_worker_credentials?token_hash=eq."+await sha256(token)+"&active=eq.true&select=id&limit=1");
     if(!credentials.length)return Response.json({error:"Authentication required"},{status:401,headers});
-    if(request.method==="GET"){const config=modelConfig();return Response.json({worker:true,model:Boolean(config.key&&config.model),modelName:config.model,consentRequired:true},{headers});}
+    if(request.method==="GET"){const config=modelConfig();return Response.json({worker:true,model:Boolean(config.key&&config.model),embeddings:Boolean(config.key),modelName:config.model,consentRequired:true},{headers});}
     if(request.method!=="POST")return new Response(null,{status:405,headers:{...headers,Allow:"GET, POST"}});
     EdgeRuntime.waitUntil(run().catch(()=>console.error("Unsite worker stopped; lease will expire for recovery")));
     return Response.json({accepted:true},{status:202,headers});

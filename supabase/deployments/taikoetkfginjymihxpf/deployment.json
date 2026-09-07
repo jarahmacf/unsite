@@ -53,6 +53,18 @@
       "name": "geo_release_regressions",
       "file": "migrations/20260907053430_geo_release_regressions.sql",
       "sha256": "8742479227b40b54d050e0195af10579377627510c08bfe823757833973d60cb"
+    },
+    {
+      "version": "20260907121910",
+      "name": "geo_semantic_retrieval",
+      "file": "migrations/20260907121910_geo_semantic_retrieval.sql",
+      "sha256": "a17458b739886765e42dfa1c85bd2d580ad1e016ee38bfc887f5997917f88bde"
+    },
+    {
+      "version": "20260907121941",
+      "name": "geo_launch_services",
+      "file": "migrations/20260907121941_geo_launch_services.sql",
+      "sha256": "24f95633232d16ee9aa2c53da288db83f8f12547fe41577c488d116d08c0539c"
     }
   ],
   "original_project_unchanged": "xwqjunvwimkqtumhbyre",
@@ -62,5 +74,19 @@
     "The initial-bootstrap-source-manifest records the exact originally applied bootstrap; the coverage correction was applied separately.",
     "No source-project credentials or customer data were copied."
   ],
-  "applied": true
+  "applied": true,
+  "edge_functions": [
+    {
+      "name": "unsite",
+      "version": 3,
+      "verify_jwt": false,
+      "sha256": "5c215d8ee90645481605dddb59a7dde4ad6f4cd6a4486f77b692136ad2a8f796"
+    },
+    {
+      "name": "unsite-worker",
+      "version": 3,
+      "verify_jwt": true,
+      "sha256": "d4df3acd5cd30dfecef080387b9e08be50e76d193fc803bb199aafc1a167fa4e"
+    }
+  ]
 }

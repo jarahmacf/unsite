@@ -1,6 +1,8 @@
 import {recordMarkdown,type PublicRelease} from "../../../lib/production/release.ts";
 import {searchKnowledge} from "../../../lib/production/retrieval.ts";
-type Reader={search:(query:string,type?:string)=>Promise<unknown>;fetch:(id:string)=>Promise<PublicRelease["data"]["records"][number]|null>;list:(offset:number)=>Promise<{records:PublicRelease["data"]["records"];total:number}>};
+import {SearchFailure} from "./semantic-search.ts";
+import {EmbeddingError} from "../../../lib/production/embeddings.ts";
+type Reader={search:(query:string,type?:string)=>Promise<unknown>;semantic?:(query:string,consent:string,type?:string)=>Promise<unknown>;fetch:(id:string)=>Promise<PublicRelease["data"]["records"][number]|null>;list:(offset:number)=>Promise<{records:PublicRelease["data"]["records"];total:number}>};
 export async function deliverMcp(request:Request,release:PublicRelease,base:string,readerApi?:Reader){
   const headers={"Content-Type":"application/json","Cache-Control":"no-store","X-Content-Type-Options":"nosniff","X-Unsite-Release":release.id};
   // This public, stateless transport is for server clients. No browser origin is implicitly trusted.
@@ -32,6 +34,7 @@ export async function deliverMcp(request:Request,release:PublicRelease,base:stri
     {name:"search",description:"Find relevant owner-published knowledge. Returns excerpts, framing, attribution, stable IDs and URLs. Optional type filters use the material’s descriptive content type. No match does not prove a fact is false.",inputSchema:{type:"object",properties:{query:{type:"string",minLength:2,maxLength:300},type:{type:"string",maxLength:100},release_id:{type:"string"}},required:["query"],additionalProperties:false},annotations},
     {name:"fetch",description:"Read a complete published record, including framing, attribution, qualifications, structured details and relationships.",inputSchema:{type:"object",properties:{id:{type:"string"},release_id:{type:"string"}},required:["id"],additionalProperties:false},annotations},
     {name:"list_resources",description:"List publisher-approved public resource links, formats, descriptions, and versions. This does not download the linked files or execute actions. Linked content may change outside this release.",inputSchema:{type:"object",properties:{release_id:{type:"string"}},additionalProperties:false},annotations},
+    ...(readerApi?.semantic?[{name:"semantic_search",description:"Search by meaning and keywords. Sends this query to OpenAI for an embedding and uses the publisher's daily request budget. Requires a ready index and explicit provider_consent. No generated answer; do not send private information without authorization.",inputSchema:{type:"object",properties:{query:{type:"string",minLength:2,maxLength:300},provider_consent:{const:"openai-query-embedding-v1"},type:{type:"string",maxLength:100},release_id:{type:"string"}},required:["query","provider_consent"],additionalProperties:false},annotations:{...annotations,idempotentHint:false,openWorldHint:true}}]:[]),
   ]});
   if(message.method==="resources/templates/list")return reply({resourceTemplates:[]});
   if(message.method==="resources/list"){
@@ -47,9 +50,12 @@ export async function deliverMcp(request:Request,release:PublicRelease,base:stri
     return reply({contents:[{uri:p.uri,mimeType:"text/markdown",text:`Release: ${release.id}\nPublished: ${release.published_at}\n\n${recordMarkdown(record,base,release.id)}`}]});
   }
   if(message.method==="tools/call"){
-    const a=p.arguments||{};if(typeof a!=="object"||Array.isArray(a)||Object.keys(a).some(k=>!(p.name==="search"?["query","type","release_id"]:["id","release_id"]).includes(k))||(a.release_id!==undefined&&typeof a.release_id!=="string"))return error(-32602,"Invalid tool arguments");if(a.release_id&&a.release_id!==release.id)return reply({isError:true,content:[{type:"text",text:"Publication changed. Search again using the current release."}]});
+    const a=p.arguments||{};if(typeof a!=="object"||Array.isArray(a)||Object.keys(a).some(k=>!(p.name==="semantic_search"?["query","provider_consent","type","release_id"]:p.name==="search"?["query","type","release_id"]:["id","release_id"]).includes(k))||(a.release_id!==undefined&&typeof a.release_id!=="string"))return error(-32602,"Invalid tool arguments");if(a.release_id&&a.release_id!==release.id)return reply({isError:true,content:[{type:"text",text:"Publication changed. Search again using the current release."}]});
     let data:unknown;
-    if(p.name==="search"){
+    if(p.name==="semantic_search"){
+      if(!readerApi?.semantic||typeof a.query!=="string"||a.query.trim().length<2||a.query.length>300||a.provider_consent!=="openai-query-embedding-v1"||(a.type!==undefined&&(typeof a.type!=="string"||a.type.length>100)))return error(-32602,"Use a query, valid optional type, and explicit OpenAI query-embedding consent");
+      try{data={...(await readerApi.semantic(a.query,a.provider_consent,a.type) as Record<string,unknown>),release_id:release.id,published_at:release.published_at};}catch(e){return reply({isError:true,content:[{type:"text",text:e instanceof SearchFailure||e instanceof EmbeddingError?e.message:"Semantic search is temporarily unavailable. Use lexical search or try again later."}]});}
+    }else if(p.name==="search"){
       if(typeof a.query!=="string"||a.query.trim().length<2||a.query.length>300)return error(-32602,"Use a question or query between 2 and 300 characters");
       if(a.type!==undefined&&(typeof a.type!=="string"||a.type.length>100))return error(-32602,"Use a content type of at most 100 characters");
       const found=readerApi?await readerApi.search(a.query,a.type?.trim()||undefined):searchKnowledge(release.data,a.query,{limit:8,type:a.type?.trim()||undefined,base,release_id:release.id});

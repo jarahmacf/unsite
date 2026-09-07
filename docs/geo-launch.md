@@ -45,7 +45,7 @@ Current limits remain visible: 8 source versions and 80 passages per collection 
 
 ## Retrieval and release checks
 
-Public records are indexed once per immutable release using Postgres full-text search. Search supports English stemming and a small explicit synonym dictionary, then selects qualified excerpts while preserving complete record links. This is lexical retrieval. Semantic embeddings and multilingual semantic evaluation are not enabled and must not be described as active AI search.
+Public records are indexed once per immutable release using Postgres full-text search. Search supports English stemming and a small explicit synonym dictionary, then selects qualified excerpts while preserving complete record links. The default remains lexical retrieval. Optional semantic indexing and hybrid queries are implemented below; availability requires configuration, owner authorization and a complete current-release index. Real-model and multilingual evaluation remain launch tasks.
 
 Record reads and search avoid downloading the complete release from the database. Full bundles remain available intentionally. Historical snapshots cannot be fetched publicly after rollback or unpublish. `release=UUID` fences multi-request reads; a different active release returns 409. ETag/If-None-Match supports conditional requests, with active publication access checked before 304. The public API applies a shared limit of 3,000 reads per publication per minute and returns 429 with Retry-After. This is an initial cost bound, not a comprehensive per-client abuse system.
 
@@ -81,7 +81,7 @@ Submit the canonical sitemap through Google Search Console and Bing Webmaster To
 
 Search crawling, user-initiated fetching and model-training crawling are different. The current robots policy exposes public knowledge and excludes private application routes. If the operator chooses a training restriction, configure GPTBot independently from OAI-SearchBot; do not block search by assuming they are the same crawler. Robots instructions are not access control; authentication and RLS protect private data.
 
-Custom-domain activation remains an external setup task. Domain verification in Visibility proves control; it does not attach that hostname to Vercel or replace an existing official website. Before activation, choose the intended hostname, configure hosting/DNS/TLS, decide whether it serves one entity or the whole app, and update `UNSITE_PUBLIC_ORIGIN` consistently in the frontend and public Edge Function. Per-tenant custom-host routing is not implemented in this release. Do not advertise arbitrary verified domains as functioning publication URLs.
+Custom-domain activation remains an external setup task. Domain verification in Visibility proves control; it does not attach that hostname to Vercel or replace an existing official website. The implemented tenant routing serves one workspace per custom hostname. Configure hosting/DNS/TLS and verify its HTTPS connection before it becomes canonical. `UNSITE_PUBLIC_ORIGIN` remains the shared application fallback; do not change it for an individual tenant. Arbitrary DNS-verified domains are not functioning publication URLs until the connection check passes.
 
 ## Deployment and configuration
 
@@ -98,7 +98,7 @@ The private worker token and gateway configuration remain environment settings f
 - Configure and verify the AI provider and optional semantic indexing after reviewing its separate scope, cost and consent.
 - Supply real entity content, official URLs, DNS proof and approved public resource URLs.
 - Complete a real owner-reviewed preparation, publication and correction walkthrough.
-- Select and activate any custom hostname; per-tenant host routing requires a follow-up implementation once that choice is made.
+- Select and activate any custom hostname using the implemented routing and verification controls.
 - Complete Search Console/Bing setup on an owned hostname and measure actual external citations over time.
 
 ## References
@@ -107,3 +107,62 @@ The private worker token and gateway configuration remain environment settings f
 - [OpenAI crawlers](https://developers.openai.com/api/docs/bots)
 - [OpenAI MCP integration](https://developers.openai.com/api/docs/mcp)
 - [Bing AI Performance](https://blogs.bing.com/webmaster/February-2026/Introducing-AI-Performance-in-Bing-Webmaster-Tools-Public-Preview)
+# GEO launch services — second implementation pass
+
+The Visibility workspace now includes **Readiness** and **Search & domains**. All editing uses the existing right-side panels. Three launch tasks remain outside simulated/contract validation: real account/provider/domain configuration, an approved content walkthrough, and external citation trials. No customer domain or content is selected by the implementation.
+
+## Semantic retrieval
+
+The owner first enables semantic retrieval and chooses a daily request limit (1–1,000; default 100). The current public release then requires its own `openai-public-embeddings-v1` authorization. Subsequent releases do not inherit indexing approval. Only immutable approved release text, fields and context are sent to OpenAI. Private sources, drafts and saved questions are excluded.
+
+The fixed embedding contract is `text-embedding-3-small`, 512 dimensions. The indexer splits the entire approved record representation into overlapping passages of at most 2,000 Unicode characters, submits at most 16 passages per request, and rejects releases above two million input characters before any provider call. Each completed batch records provider token usage when returned. The API and worker both read `OPENAI_API_KEY` from Supabase function configuration. Keys never appear in the browser, source export or public response.
+
+Embedding requests are not automatically retried. A failed or expired provider attempt becomes blocked; the owner must review the retry notice and authorize its unfinished passages. Completed passages are not replayed. Disabling semantic retrieval stops new work and prevents vector queries. Availability is scoped to the exact active release and requires all of its passages to be ready. Releasing new content, unpublishing, or disabling the setting prevents mixed-release retrieval.
+
+Ordinary `GET /search?q=...` and the MCP `search` tool remain lexical and make no provider request. Semantic retrieval is explicit:
+
+```http
+POST /functions/v1/unsite/v2/SPACE_ID/search?release=RELEASE_ID
+Content-Type: application/json
+
+{"query":"Where should a courier enter?","provider_consent":"openai-query-embedding-v1","limit":8}
+```
+
+MCP offers a separate `semantic_search` tool with the same query-provider consent. The requester must authorize sending its query to OpenAI. Public profiles and OpenAPI report current hybrid availability; HTTP 409 means the index/provider is unavailable or the release changed. HTTP 429 means the daily semantic request budget was reached or availability changed during reservation. Failed provider requests count toward that daily bound. Lexical retrieval remains available.
+
+Hybrid retrieval combines full-text and cosine-similarity results with reciprocal rank fusion (`k=60`). Tenant, release and type/kind/topic filters apply before ranking. Exact cosine ranking over the bounded release avoids approximate-neighbor post-filter recall loss. The initial cosine cutoff is 0.72 distance; it is a retrieval heuristic requiring real-content evaluation, not a factual-confidence score. Results retain the existing qualified excerpts, complete-record URLs, context, fields, relationships and release ID. No answer is generated by this endpoint.
+
+## Custom hostnames
+
+1. Verify the **exact intended hostname** under Visibility → Identity. A parent-domain claim does not silently authorize all subdomains.
+2. Select it under Search & domains → Connect hostname. Each workspace has one canonical custom hostname; replacing it resets search verification settings and disconnects the prior mapping.
+3. The operator adds this hostname to the existing Unsite Vercel project and applies the project-specific DNS record shown by Vercel. Do not copy a guessed CNAME or replace an existing main website unintentionally. A separate hostname such as `knowledge.example.com` can preserve the main website.
+4. Run Check connection. The worker verifies the `/.well-known/unsite-host` response over HTTPS, using the workspace binding and random probe token. DNS proof alone does not mark hosting as connected.
+
+Only a current DNS claim and a current HTTPS connection make the custom address canonical. Connection checks repeat daily and expire after seven days. Revocation/expiry is checked on public reads, without a positive routing cache. `Host` is matched exactly; caller-provided forwarded-host headers are ignored. Unknown hosts and private application routes on tenant hosts return 404. Cookie/Authorization headers are not forwarded into public API delivery.
+
+Connected hosts expose `/`, `/records/RECORD_ID`, `/api/…`, `/llms.txt`, `/openapi.json`, `/index.md`, `/mcp`, `/robots.txt` and `/sitemap.xml`. The application-host pages continue to advertise the verified canonical address. The underlying API remains the same release-fenced Supabase service. After unpublishing, record/page/API access stops while the hostname's empty sitemap and IndexNow verification file remain available for removal notifications.
+
+This implements routing and verification. Vercel domain attachment, DNS records and TLS issuance are real external setup steps; no successful connection is fabricated in the sample workspace.
+
+## Resource checks and readiness
+
+Publishing queues availability checks for approved resource links. The worker respects crawling rules, checks public DNS addresses, limits redirects/timeouts, uses HEAD with a bounded GET-range fallback where needed, and cancels response bodies. It preserves URL query parameters, records status/content type/final URL, and reports format differences as warnings. It neither executes linked tools nor stores linked file contents. Current-release resources are checked daily; owners/editors can request another check after the five-minute limit. Results from a superseded release cannot overwrite the current result.
+
+Readiness shows individual checks for publisher identity, public release, current HTTP/MCP delivery, resource availability, monitoring freshness, semantic indexing, custom hosting and search submission. Pending, missing, expired and failed checks remain distinct. A resource check is a point-in-time observation, not a historical uptime percentage. No readiness state establishes search rank, model preference, or independent truth of publisher claims.
+
+## Search consoles and IndexNow
+
+Copy the **content value** from Google Search Console's or Bing Webmaster Tools' HTML verification tag into Search & domains. Unsite emits the tags on the connected canonical hostname. The user finishes account verification and submits `https://HOST/sitemap.xml` in those services.
+
+IndexNow is off by default. Enabling it requires `indexnow-public-urls-v1` authorization for recurring delivery of canonical public page URLs and a hostname verification key to `https://api.indexnow.org/indexnow`. Participating engines may share submitted URLs. The random key is served as `https://HOST/KEY.txt`; it is an IndexNow proof file, not an application credential.
+
+The worker verifies that file before submitting a bounded batch. Only this host's root and approved record URLs are included. New publication, restore and unpublish events queue the union of old/current record URLs, so removals are represented. Private questions, originals, source names, third-party resource URLs and internal application paths never enter this queue. Revoked ownership, disabled notifications or replaced hostname/key bindings invalidate queued work. Rate limits and transient failures use bounded backoff, with no more than four attempts per submission. HTTP 200 is displayed as received; 202 is validation pending. Neither means indexed or cited.
+
+## Operational validation
+
+`tests/geo-launch.sql` runs only rollback fixtures for tenant access, per-release provider authorization, lease expiry, vector-only hits, daily request quotas, hostname verification/expiry, resource leases, search-submission scope and unpublish removals. `tests/geo-launch.test.mjs` checks HTTP/MCP consent boundaries, provider failures, custom-host isolation, preserved resource URLs, crawling restrictions and IndexNow response semantics. These tests make no real model call or search submission.
+
+Implementation references: [OpenAI embeddings](https://developers.openai.com/api/docs/guides/embeddings), [Supabase hybrid search](https://supabase.com/docs/guides/ai/hybrid-search), [Next.js Proxy](https://nextjs.org/docs/app/api-reference/file-conventions/proxy), [Vercel domain setup](https://vercel.com/docs/domains/working-with-domains/add-a-domain), [IndexNow protocol](https://www.indexnow.org/documentation.html).
+
+---

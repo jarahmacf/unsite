@@ -2,12 +2,12 @@ import { contentMarkdown, CONTENT_TYPES, type PublicContent } from "../../../lib
 import {deliverV2} from "./v2.ts";
 import {deliverIndexed} from "./indexed.ts";
 
-type Runtime = { url:string; key:string; indexed?:boolean;publicOrigin?:string };
+type Runtime = { url:string; key:string; indexed?:boolean;publicOrigin?:string;embeddingKey?:string };
 type PublishedRow = { id:string; data:PublicContent; revision:number; published_at:string; active:boolean };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const hashPattern = /^[0-9a-f]{64}$/;
 class ApiError extends Error { constructor(public status:number,message:string){super(message);} }
-const headers = {"Cache-Control":"no-store","X-Content-Type-Options":"nosniff","Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, HEAD, OPTIONS","Access-Control-Allow-Headers":"Accept, Content-Type, If-None-Match"};
+const headers = {"Cache-Control":"no-store","X-Content-Type-Options":"nosniff","Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, HEAD, POST, OPTIONS","Access-Control-Allow-Headers":"Accept, Content-Type, If-None-Match"};
 function json(body:unknown,status=200){return Response.json(body,{status,headers});}
 function text(body:string,type="text/markdown; charset=utf-8"){return new Response(body,{headers:{...headers,"Content-Type":type}});}
 function validString(v:unknown,max:number,required=false):v is string {return typeof v === "string" && v.length<=max && (!required || v.trim().length>0);}
@@ -73,8 +73,19 @@ export function createHandler(runtime:Runtime,requestFetch:typeof fetch=fetch) {
         return json(result);
       }
       const parts=path.split("/").filter(Boolean);
-      if(parts[0]==="v2")return runtime.indexed?await deliverIndexed(request,parts,runtime.url,rest,(runtime.publicOrigin||"https://unsite.vercel.app").replace(/\/$/,"")):await deliverV2(request,parts,runtime.url,rest);
+      if(parts[0]==="v2")return runtime.indexed?await deliverIndexed(request,parts,runtime.url,rest,(runtime.publicOrigin||"https://unsite.vercel.app").replace(/\/$/,""),{key:runtime.embeddingKey||"",requestFetch}):await deliverV2(request,parts,runtime.url,rest);
       if(!["GET","HEAD"].includes(request.method))return new Response(null,{status:405,headers:{...headers,Allow:"GET, HEAD, OPTIONS"}});
+      if(parts[0]==="hosts"&&runtime.indexed){
+        const keyFile=parts.length===4&&parts[2]==="keys"&&/^[a-f0-9]{64}$/.test(parts[3]);
+        if((parts.length!==2&&!keyFile)||!/^([a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}$/.test(parts[1])||parts[1].length>253)return json({error:"Hostname not found."},404);
+        const binding=await rest("rpc/unsite_public_host",{method:"POST",body:JSON.stringify({hostname:parts[1]})}) as Record<string,unknown>|null;
+        if(!binding)return json({error:"Hostname not found."},404);
+        // Keep the unlisted IndexNow key out of ordinary discovery responses.
+        // Serve it only when the requester already supplies its exact file key.
+        if(keyFile)return binding.routable&&binding.indexnow_key===parts[3]?new Response(request.method==="HEAD"?null:parts[3],{headers:{...headers,"Content-Type":"text/plain; charset=utf-8","X-Robots-Tag":"noindex"}}):json({error:"Verification file not found."},404);
+        const {indexnow_key:_key,...publicBinding}=binding;
+        return request.method==="HEAD"?new Response(null,{headers}):json(publicBinding);
+      }
       if(path==="/directory"&&runtime.indexed){
         const offset=Number(url.searchParams.get("offset")||0),limit=Number(url.searchParams.get("limit")||100);
         if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>100)return json({error:"Invalid pagination."},400);
