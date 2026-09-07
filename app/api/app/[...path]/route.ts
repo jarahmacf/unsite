@@ -119,8 +119,8 @@ export async function GET(request:Request){
     }else if(path==="candidates"||path==="records"||path==="releases"){
       const space=uuid.parse(url.searchParams.get("space")),offset=z.coerce.number().int().min(0).max(100000).parse(url.searchParams.get("offset")||0);
       let query=client.from("unsite_"+path).select(path==="releases"?"id,space_id,revision,source_revision,summary,created_by,published_at":"*",{count:"exact"}).eq("space_id",space);
-      if(path==="candidates")query=query.eq("status","proposed").eq("review_ready",true).order("created_at");
-      else query=query.order(path==="records"?"updated_at":"revision",{ascending:false});
+      if(path==="candidates")query=query.eq("status","proposed").eq("review_ready",true).order("created_at").order("id");
+      else query=query.order(path==="records"?"updated_at":"revision",{ascending:false}).order("id");
       const {data,error,count}=await query.range(offset,offset+99);databaseError(error);result={items:data,count};
     }else if(path==="version"){
       const id=uuid.parse(url.searchParams.get("id"));
